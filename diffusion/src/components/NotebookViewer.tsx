@@ -8,6 +8,8 @@ import type { Notebook } from "@/models/notebook";
 import { MarkdownCell } from "@/components/cells/MarkdownCell";
 import { CodeCell } from "@/components/cells/CodeCell";
 import { OutputCell } from "@/components/cells/OutputCell";
+import { ExplanationBlock } from "@/components/cells/ExplanationBlock";
+import { getExplanation } from "@/data/explanations";
 
 type LoadState =
   | { phase: "loading" }
@@ -55,14 +57,21 @@ export function NotebookViewer({ id }: { id: string }) {
     );
   }
 
+  const { notebook } = state;
+  let codeIndex = -1;
+
   return (
     <div className="space-y-5">
-      {state.notebook.cells.map((cell, i) =>
-        cell.type === "markdown" ? (
-          <MarkdownCell key={i} source={cell.source} />
-        ) : (
+      {notebook.cells.map((cell, i) => {
+        if (cell.type === "markdown") {
+          return <MarkdownCell key={i} source={cell.source} />;
+        }
+        codeIndex += 1;
+        const explanation = getExplanation(notebook.id, codeIndex);
+        return (
           <div key={i} className="space-y-2">
             <CodeCell source={cell.source} />
+            {explanation && <ExplanationBlock text={explanation} />}
             {cell.outputs.length > 0 && (
               <div className="space-y-2 pl-1">
                 {cell.outputs.map((out, j) => (
@@ -71,8 +80,8 @@ export function NotebookViewer({ id }: { id: string }) {
               </div>
             )}
           </div>
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
