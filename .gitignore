@@ -16,6 +16,9 @@ dist-ssr
 public/notebooks/
 public/nb-assets/
 
+# Subagent scratch memory (not part of the app)
+.claude/agent-memory/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

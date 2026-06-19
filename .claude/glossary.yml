@@ -1,0 +1,48 @@
+# 도메인 용어집 — diffusion-study
+# CANNOT 가드레일 6: 신규 도메인 용어는 용어집 등록 후 코드 작성.
+terms:
+  - name: Part
+    definition: 커리큘럼의 한 단원(1~10). 제목/요약/개념/노트북/영상 참조를 가진다.
+    aliases: [파트, 단원]
+    context: src/models/curriculum.ts — Part 인터페이스
+    added: 2026-06-19
+  - name: PartStatus
+    definition: 파트 진행 상태. not_started | in_progress | done 세 가지.
+    aliases: [진행상태]
+    context: src/models/progress.ts, computePartStatus
+    added: 2026-06-19
+  - name: PartProgress
+    definition: 한 파트의 진도 기록. 상태, 노트북별 완료, 메모, 시작/완료 시각.
+    aliases: [파트진도]
+    context: src/models/progress.ts
+    added: 2026-06-19
+  - name: ProgressState
+    definition: 파트 id(1~10) → PartProgress 매핑. 전체 진도 상태의 단일 컨테이너.
+    aliases: [진도상태]
+    context: src/store/useStudyStore.ts, localStorage 영속화
+    added: 2026-06-19
+  - name: OverallStats
+    definition: 전체 진도 요약. percent, 완료 파트 수, 전체 파트 수, 완료 노트북 수, 전체 노트북 수.
+    aliases: [전체통계]
+    context: src/domain/progressLogic.ts — computeOverall
+    added: 2026-06-19
+  - name: TimelineEvent
+    definition: 학습 활동 기록 1건. part_started/part_completed/notebook_completed/memo_updated 유형.
+    aliases: [타임라인이벤트, 활동기록]
+    context: src/models/progress.ts, src/domain/timelineLogic.ts
+    added: 2026-06-19
+  - name: Study days
+    definition: 이벤트가 발생한 서로 다른 로컬 날짜(YYYY-MM-DD)의 개수. "학습 일수" 지표.
+    aliases: [학습 일수, distinctStudyDays]
+    context: src/domain/timelineLogic.ts — distinctStudyDays
+    added: 2026-06-19
+  - name: Streak
+    definition: 오늘 또는 어제로 끝나는 연속 학습일 수. 끊기면 0.
+    aliases: [연속 학습일, currentStreak]
+    context: src/domain/timelineLogic.ts — currentStreak
+    added: 2026-06-19
+  - name: Notebook
+    definition: 전처리기가 만든 슬림 노트북 JSON. 셀(markdown/code+outputs) 배열.
+    aliases: [노트북]
+    context: src/models/notebook.ts, src/system/notebookLoader.ts
+    added: 2026-06-19

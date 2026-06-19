@@ -1,10 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+// Entry wiring: mount the app with router + study store provider. No logic.
 
-createRoot(document.getElementById('root')!).render(
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { StudyStoreProvider } from "@/store/StudyStoreProvider";
+import App from "@/App";
+import "./index.css";
+
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <StudyStoreProvider>
+        <App />
+      </StudyStoreProvider>
+    </BrowserRouter>
   </StrictMode>,
-)
+);
