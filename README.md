@@ -9,6 +9,7 @@
 | 주제 | 설명 | 경로 |
 |---|---|---|
 | Diffusion & Gen AI | 디퓨전 모델 강의 학습 허브 — 10파트 로드맵 · 진도/타임라인 · 노트북 인페이지 뷰어 | [`diffusion/`](./diffusion) |
+| diffusers 라이브러리 | HF diffusers 코드 리딩 + 사용법 — 파이프라인·스케줄러·U-Net·VAE 등 8파트 | [`diffusers/`](./diffusers) |
 
 _앞으로 공부하는 주제마다 폴더가 늘어납니다._
 
@@ -16,9 +17,12 @@ _앞으로 공부하는 주제마다 폴더가 늘어납니다._
 
 ```
 cube-studyroom/
-  diffusion/      # 첫 주제 — React 학습 앱
+  diffusion/      # 디퓨전 강의 (노트북 렌더링)
+  diffusers/      # HF diffusers 라이브러리 (코드 리딩 + 사용법)
   <next-topic>/   # 이후 추가
 ```
+
+두 앱은 같은 컴포넌트 패턴(뷰어·해석·다이어그램·진도)을 공유합니다.
 
 각 주제 폴더는 자체 README와 실행법을 가집니다. 예) 디퓨전 앱:
 
