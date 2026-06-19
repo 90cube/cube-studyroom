@@ -7,6 +7,7 @@ import { computePartStatus } from "@/domain/progressLogic";
 import { useStudy } from "@/store/StudyStoreProvider";
 import { useTopic } from "@/topics/TopicContext";
 import { Badge } from "@/components/ui/badge";
+import { PartOverview } from "@/components/PartOverview";
 import { ConceptCard } from "@/components/ConceptCard";
 import { YouTubeButtons } from "@/components/YouTubeButtons";
 import { ProgressControls } from "@/components/ProgressControls";
@@ -45,6 +46,8 @@ export function PartDetailPage() {
         </h1>
         <p className="text-sm text-muted-foreground">{part.title}</p>
       </header>
+
+      <PartOverview part={part} />
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2">

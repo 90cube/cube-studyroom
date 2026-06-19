@@ -8,6 +8,7 @@ import { distinctStudyDays, currentStreak, sortEventsDesc } from "@/domain/timel
 import { useStudy } from "@/store/StudyStoreProvider";
 import { useTopic } from "@/topics/TopicContext";
 import { StatCard } from "@/components/StatCard";
+import { TopicOverview } from "@/components/TopicOverview";
 import { RoadmapTimeline } from "@/components/RoadmapTimeline";
 import { TimelineEventRow } from "@/components/TimelineEventRow";
 
@@ -44,6 +45,8 @@ export function DashboardPage() {
           </motion.div>
         ))}
       </section>
+
+      <TopicOverview />
 
       <section>
         <h2 className="mb-4 text-lg font-medium text-foreground">학습 로드맵</h2>

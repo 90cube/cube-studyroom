@@ -26,6 +26,15 @@ export const CURRICULUM: Part[] = [
       { title: "디퓨전 생성모델 입문", url: "https://youtu.be/QrZ7u29ITtw" },
       { title: "조건부 생성", url: "https://youtu.be/OE3KFv1zyUs" },
     ],
+    overview: {
+      hook: "디퓨전의 심장은 의외로 단순해 — '노이즈를 더했다가, 그걸 되돌리는 법'을 배우는 거야. 가장 작은 2D 점들로 그 핵심만 딱 떼어 본다.",
+      oneLine: "데이터에 노이즈를 단계적으로 더하고(forward), 신경망이 그 노이즈를 예측해 거꾸로 걷어내(reverse) 새 데이터를 만든다.",
+      prereqs: [],
+      unlocks: "이 forward/reverse 원리가 이후 모든 파트의 뼈대. 바로 다음 Part 2에서 똑같은 걸 진짜 이미지(MNIST)로 확장한다.",
+      bigPicture: `flowchart LR
+  D["데이터 (2D 점)"] -->|"forward: 노이즈를 조금씩 더해"| N["순수 노이즈"]
+  N -->|"reverse: 모델이 노이즈를 예측해 걷어내"| G["복원·생성된 데이터"]`,
+    },
   },
   {
     id: 2,
