@@ -1,11 +1,11 @@
-// App shell: sticky header (title, dark-mode toggle, repo link, mini progress)
-// + routed <Outlet/>. Render-only; reads overall progress from useStudy().
+// Topic shell: sticky header (studyroom home + topic, dark toggle, repo link,
+// mini progress) + routed <Outlet/>. Reads progress from useStudy(), labels from useTopic().
 
 import { Link, Outlet } from "react-router-dom";
 import { Library, Moon, Sun } from "lucide-react";
-import { COURSE_REPO_URL } from "@/data/constants";
 import { useTheme } from "@/store/useTheme";
 import { useStudy } from "@/store/StudyStoreProvider";
+import { useTopic } from "@/topics/TopicContext";
 import { Progress } from "@/components/ui/progress";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,14 +13,24 @@ import { cn } from "@/lib/utils";
 export function AppShell() {
   const { theme, toggle } = useTheme();
   const { overall } = useStudy();
+  const topic = useTopic();
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/" className="font-semibold tracking-tight text-foreground">
-            디퓨전 스터디
-          </Link>
+          <div className="flex min-w-0 items-center gap-1.5 text-sm">
+            <Link to="/" className="shrink-0 font-semibold tracking-tight text-foreground">
+              스터디룸
+            </Link>
+            <span className="text-muted-foreground/50">/</span>
+            <Link
+              to={`/${topic.slug}`}
+              className="truncate text-muted-foreground hover:text-foreground"
+            >
+              {topic.title}
+            </Link>
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden items-center gap-2 sm:flex">
@@ -31,10 +41,10 @@ export function AppShell() {
             </div>
 
             <a
-              href={COURSE_REPO_URL}
+              href={topic.repoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="강의 저장소 열기"
+              aria-label={topic.repoLabel}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <Library />

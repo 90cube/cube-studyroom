@@ -1,13 +1,13 @@
 // Theme state container (React hook). Persists to localStorage.
 
 import { useCallback, useEffect, useState } from "react";
-import { STORAGE_KEYS } from "@/data/constants";
+import { THEME_KEY } from "@/data/constants";
 
 type Theme = "light" | "dark";
 
 function readStored(): Theme | null {
   try {
-    const v = localStorage.getItem(STORAGE_KEYS.theme);
+    const v = localStorage.getItem(THEME_KEY);
     return v === "light" || v === "dark" ? v : null;
   } catch {
     return null;
@@ -30,7 +30,7 @@ export function useTheme(): { theme: Theme; toggle: () => void } {
   useEffect(() => {
     applyTheme(theme);
     try {
-      localStorage.setItem(STORAGE_KEYS.theme, theme);
+      localStorage.setItem(THEME_KEY, theme);
     } catch {
       // best-effort persistence
     }

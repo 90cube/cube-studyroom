@@ -1,7 +1,7 @@
-// "강의 영상" — one outline link button per video, opens in a new tab.
-// Render-only.
+// References card (topic-labelled) — one outline link button per reference,
+// opens in a new tab. Render-only. Uses the Part.videos field as links.
 
-import { Play } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { Part } from "@/models/curriculum";
 import {
   Card,
@@ -10,15 +10,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { useTopic } from "@/topics/TopicContext";
 import { cn } from "@/lib/utils";
 
 export function YouTubeButtons({ part }: { part: Part }) {
+  const topic = useTopic();
   if (part.videos.length === 0) return null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>강의 영상</CardTitle>
+        <CardTitle>{topic.refLabel}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {part.videos.map((video) => (
@@ -32,7 +34,7 @@ export function YouTubeButtons({ part }: { part: Part }) {
               "w-full justify-start",
             )}
           >
-            <Play className="text-destructive" />
+            <ExternalLink className="text-primary" />
             <span className="truncate">{video.title}</span>
           </a>
         ))}

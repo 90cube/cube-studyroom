@@ -2,10 +2,11 @@
 // status pill, progress bar. Render-only; reads progress from useStudy().
 
 import { Link } from "react-router-dom";
-import { FileText, Play } from "lucide-react";
+import { FileText, Library } from "lucide-react";
 import type { Part } from "@/models/curriculum";
 import { computePartPercent, computePartStatus } from "@/domain/progressLogic";
 import { useStudy } from "@/store/StudyStoreProvider";
+import { useTopic } from "@/topics/TopicContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,13 +15,14 @@ import { cn } from "@/lib/utils";
 
 export function PartCard({ part }: { part: Part }) {
   const { getPart } = useStudy();
+  const topic = useTopic();
   const pp = getPart(part.id);
   const status = computePartStatus(part, pp);
   const percent = computePartPercent(part, pp);
   const meta = partStatusMeta(status);
 
   return (
-    <Link to={`/part/${part.slug}`} className="block">
+    <Link to={`/${topic.slug}/part/${part.slug}`} className="block">
       <Card
         className={cn(
           "p-5 transition-all hover:shadow-md hover:-translate-y-0.5",
@@ -42,11 +44,11 @@ export function PartCard({ part }: { part: Part }) {
         <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <FileText className="size-3.5" />
-            노트북 {part.notebooks.length}
+            {topic.itemLabel} {part.notebooks.length}
           </span>
           <span className="inline-flex items-center gap-1">
-            <Play className="size-3.5" />
-            영상 {part.videos.length}
+            <Library className="size-3.5" />
+            참고 {part.videos.length}
           </span>
         </div>
 

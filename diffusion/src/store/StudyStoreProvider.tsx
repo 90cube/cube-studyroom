@@ -3,11 +3,13 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useStudyStore, type StudyStore } from "@/store/useStudyStore";
+import { useTopic } from "@/topics/TopicContext";
 
 const StudyContext = createContext<StudyStore | null>(null);
 
 export function StudyStoreProvider({ children }: { children: ReactNode }) {
-  const store = useStudyStore();
+  const topic = useTopic();
+  const store = useStudyStore(topic.curriculum, topic.storageNs);
   return (
     <StudyContext.Provider value={store}>{children}</StudyContext.Provider>
   );

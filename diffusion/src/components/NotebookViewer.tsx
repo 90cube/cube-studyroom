@@ -1,31 +1,33 @@
-// Loads one slim notebook by id and renders its cells in order. Render + local
-// load state only (no domain state). Cell rendering delegated to cell components.
+// Renders one doc's cells in order, resolved through the active topic
+// (diffusion = fetched notebook JSON, diffusers = authored docs). Render + local
+// load state only. Explanation + diagram come from the topic too.
 
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { loadNotebook } from "@/system/notebookLoader";
-import type { Notebook } from "@/models/notebook";
+import type { NotebookCell } from "@/models/notebook";
+import { useTopic } from "@/topics/TopicContext";
 import { MarkdownCell } from "@/components/cells/MarkdownCell";
 import { CodeCell } from "@/components/cells/CodeCell";
 import { OutputCell } from "@/components/cells/OutputCell";
 import { ExplanationBlock } from "@/components/cells/ExplanationBlock";
 import { DiagramBlock } from "@/components/cells/DiagramBlock";
-import { getExplanation } from "@/data/explanations";
 
 type LoadState =
   | { phase: "loading" }
   | { phase: "error" }
-  | { phase: "ready"; notebook: Notebook };
+  | { phase: "ready"; cells: NotebookCell[] };
 
 export function NotebookViewer({ id }: { id: string }) {
+  const topic = useTopic();
   const [state, setState] = useState<LoadState>({ phase: "loading" });
 
   useEffect(() => {
     let alive = true;
     setState({ phase: "loading" });
-    loadNotebook(id)
-      .then((notebook) => {
-        if (alive) setState({ phase: "ready", notebook });
+    topic
+      .resolveCells(id)
+      .then((cells) => {
+        if (alive) setState({ phase: "ready", cells });
       })
       .catch(() => {
         if (alive) setState({ phase: "error" });
@@ -33,42 +35,43 @@ export function NotebookViewer({ id }: { id: string }) {
     return () => {
       alive = false;
     };
-  }, [id]);
+  }, [id, topic]);
 
   if (state.phase === "loading") {
     return (
       <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" />
-        노트북 불러오는 중…
+        불러오는 중…
       </div>
     );
   }
 
   if (state.phase === "error") {
     return (
-      <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
-        <p className="text-sm font-medium text-foreground">
-          노트북을 불러오지 못했어요
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          <code className="rounded bg-muted px-1 py-0.5">npm run notebooks</code>{" "}
-          를 한 번 실행했는지 확인하세요.
-        </p>
+      <div className="rounded-lg border border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+        콘텐츠를 불러오지 못했어요.
       </div>
     );
   }
 
-  const { notebook } = state;
+  if (state.cells.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+        이 항목은 아직 준비 중이에요.
+      </div>
+    );
+  }
+
   let codeIndex = -1;
 
   return (
     <div className="space-y-5">
-      {notebook.cells.map((cell, i) => {
+      {state.cells.map((cell, i) => {
         if (cell.type === "markdown") {
           return <MarkdownCell key={i} source={cell.source} />;
         }
         codeIndex += 1;
-        const explanation = getExplanation(notebook.id, codeIndex);
+        const explanation = topic.getExplanation(id, codeIndex);
         return (
           <div key={i} className="space-y-2">
             <CodeCell source={cell.source} />

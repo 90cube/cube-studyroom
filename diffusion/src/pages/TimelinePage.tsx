@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { localDayKey, sortEventsDesc } from "@/domain/timelineLogic";
 import type { TimelineEvent } from "@/models/progress";
 import { useStudy } from "@/store/StudyStoreProvider";
+import { useTopic } from "@/topics/TopicContext";
 import { TimelineEventRow } from "@/components/TimelineEventRow";
 
 function groupByDay(events: TimelineEvent[]): [string, TimelineEvent[]][] {
@@ -29,16 +30,17 @@ function formatDay(key: string): string {
 
 export function TimelinePage() {
   const { timeline } = useStudy();
+  const topic = useTopic();
   const groups = groupByDay(sortEventsDesc(timeline));
 
   return (
     <div className="space-y-8">
       <Link
-        to="/"
+        to={`/${topic.slug}`}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        로드맵
+        {topic.title} 로드맵
       </Link>
 
       <header>

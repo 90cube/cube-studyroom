@@ -3,10 +3,10 @@
 
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
-import { CURRICULUM } from "@/data/curriculum";
 import { computePartStatus } from "@/domain/progressLogic";
 import type { PartStatus } from "@/models/progress";
 import { useStudy } from "@/store/StudyStoreProvider";
+import { useTopic } from "@/topics/TopicContext";
 import { PartCard } from "@/components/PartCard";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +19,13 @@ function nodeClasses(status: PartStatus): string {
 
 export function RoadmapTimeline() {
   const { getPart } = useStudy();
+  const { curriculum } = useTopic();
 
   return (
     <ol className="relative space-y-4">
-      {CURRICULUM.map((part, i) => {
+      {curriculum.map((part, i) => {
         const status = computePartStatus(part, getPart(part.id));
-        const last = i === CURRICULUM.length - 1;
+        const last = i === curriculum.length - 1;
         return (
           <motion.li
             key={part.id}

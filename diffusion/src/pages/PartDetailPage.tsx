@@ -3,9 +3,9 @@
 
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { PART_BY_SLUG } from "@/data/curriculum";
 import { computePartStatus } from "@/domain/progressLogic";
 import { useStudy } from "@/store/StudyStoreProvider";
+import { useTopic } from "@/topics/TopicContext";
 import { Badge } from "@/components/ui/badge";
 import { ConceptCard } from "@/components/ConceptCard";
 import { YouTubeButtons } from "@/components/YouTubeButtons";
@@ -17,9 +17,10 @@ import { partStatusMeta } from "@/components/partStatusMeta";
 export function PartDetailPage() {
   const { slug } = useParams();
   const { getPart } = useStudy();
-  const part = slug ? PART_BY_SLUG[slug] : undefined;
+  const topic = useTopic();
+  const part = slug ? topic.partBySlug[slug] : undefined;
 
-  if (!part) return <Navigate to="/" replace />;
+  if (!part) return <Navigate to={`/${topic.slug}`} replace />;
 
   const status = computePartStatus(part, getPart(part.id));
   const meta = partStatusMeta(status);
@@ -27,11 +28,11 @@ export function PartDetailPage() {
   return (
     <div className="space-y-8">
       <Link
-        to="/"
+        to={`/${topic.slug}`}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        로드맵
+        {topic.title} 로드맵
       </Link>
 
       <header className="space-y-2">
@@ -57,7 +58,7 @@ export function PartDetailPage() {
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium text-foreground">노트북</h2>
+        <h2 className="text-lg font-medium text-foreground">{topic.sectionLabel}</h2>
         <NotebookTabs part={part} />
       </section>
     </div>
