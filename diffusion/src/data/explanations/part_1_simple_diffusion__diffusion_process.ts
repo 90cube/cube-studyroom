@@ -1,9 +1,50 @@
 // Part 1 코드 해석문 — 코드 셀 순서(codeIndex)대로.
 // 톤: 컴퓨터에게 구어체로 지시하듯, 무엇을 왜 시키는지 풀어쓰기.
 
-const explanations: string[] = [
+import type { ExplanationEntry } from "./types";
+
+const explanations: ExplanationEntry[] = [
   // 0 — imports
-  "먼저 연장통부터 펼쳐. PyTorch(딥러닝 본체), numpy(숫자 계산), matplotlib·seaborn(그림 그리기), sklearn(샘플 데이터 만들기)을 다 불러와 둬. 앞으로 쓸 도구들을 미리 책상 위에 꺼내놓는 단계야.",
+  {
+    text: "먼저 연장통부터 펼쳐 — 앞으로 쓸 도구들을 미리 다 꺼내놓는 단계야. 각각 뭐고 이 노트북에서 어디 쓰일지는 아래에 정리해놨어.",
+    imports: [
+      {
+        name: "torch · torch.nn · F",
+        what: "PyTorch — 텐서 연산과 신경망 빌딩블록",
+        use: "뒤에서 노이즈 걷어낼 Model(신경망) 정의, 노이즈 텐서 생성(randn_like), 학습 루프 전체에 쓰여",
+      },
+      {
+        name: "numpy (np)",
+        what: "수치 배열 계산 라이브러리",
+        use: "sklearn이 준 데이터를 torch 텐서로 넘기기 전 다루는 보조용",
+      },
+      {
+        name: "matplotlib.pyplot (plt)",
+        what: "기본 그래프 그리기 도구",
+        use: "alpha_bar 곡선·학습 손실 곡선 같은 일반 라인 플롯",
+      },
+      {
+        name: "seaborn (sns)",
+        what: "matplotlib 위에 얹은 예쁜 통계 그래프",
+        use: "데이터 점을 흩뿌리는 산점도(scatterplot)는 전부 얘로 그려",
+      },
+      {
+        name: "sklearn.datasets",
+        what: "연습용 장난감 데이터셋 생성기",
+        use: "make_circles·make_blobs로 학습용 2D 점 모양을 만들어",
+      },
+      {
+        name: "clear_output",
+        what: "셀 출력을 지우는 IPython 도구",
+        use: "생성 과정을 애니메이션처럼 갱신할 때 이전 그림을 지워줘",
+      },
+      {
+        name: "time",
+        what: "시간 유틸",
+        use: "time.sleep으로 애니메이션 프레임 사이에 살짝 딜레이 줄 때",
+      },
+    ],
+  },
   // 1 — sample_data (circles + normalize)
   "데이터를 직접 만들어주는 함수를 정의해. sklearn한테 '점 500개를 동그라미 두 겹 모양으로 찍어줘'라고 시키고 약간의 노이즈도 섞어. 그다음 좌표를 평균 0·표준편차 1로 맞춰(정규화) — 모델이 학습하기 좋게 숫자 크기를 고르게 펴주는 거야.",
   // 2 — scatter x0
@@ -16,8 +57,17 @@ const explanations: string[] = [
   "노이즈를 걷어낼 신경망을 설계해. 입력은 '노이즈 낀 점의 좌표'와 '지금 몇 번째 단계인지(t)'를 같이 받아. 층을 몇 개 쌓되 매 층마다 t 정보와 원래 입력을 다시 더해줘서(skip) 모델이 시간 감각을 잃지 않게 해. 출력은 '이 점에 낀 노이즈가 뭘까'에 대한 예측이야.",
   // 6 — device + model
   "GPU가 있으면 GPU, 없으면 CPU를 쓰도록 정하고, 방금 설계한 모델을 그 장치에 올려. 이제부터 계산은 거기서 돌아가.",
-  // 7 — training loop
-  "모델을 훈련시켜. 5만 번 반복하면서 매번 원본에 무작위 노이즈를 섞고(아무 단계나 골라서), 모델한테 '여기 낀 노이즈 맞혀봐' 시킨 뒤, 실제 노이즈와 얼마나 틀렸는지(MSE) 재서 그만큼 모델을 조금씩 고쳐. 끝나면 손실 곡선을 그려 — 아래로 내려가면 잘 배우고 있는 거야.",
+  // 7 — training loop (imports tqdm)
+  {
+    text: "모델을 훈련시켜. 5만 번 반복하면서 매번 원본에 무작위 노이즈를 섞고(아무 단계나 골라서), 모델한테 '여기 낀 노이즈 맞혀봐' 시킨 뒤, 실제 노이즈와 얼마나 틀렸는지(MSE) 재서 그만큼 모델을 조금씩 고쳐. 끝나면 손실 곡선을 그려 — 아래로 내려가면 잘 배우고 있는 거야.",
+    imports: [
+      {
+        name: "tqdm.auto.tqdm",
+        what: "반복문 진행률 표시줄",
+        use: "5만 스텝 학습이 지금 어디까지 갔는지 막대로 실시간 보여줘",
+      },
+    ],
+  },
   // 8 — DDPM sampling
   "이번엔 거꾸로, 순수 노이즈에서 진짜 데이터를 만들어내. 완전 랜덤한 점에서 시작해 T단계를 거꾸로 내려오며, 매 단계 모델이 '낀 노이즈'를 예측하면 DDPM 공식대로 그만큼 살짝 걷어내. 0에 가까워질수록 점들이 다시 동그라미로 모이는 걸 중간중간 그려서 보여줘.",
   // 9 — sample_data blobs + labels

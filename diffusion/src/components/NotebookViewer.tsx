@@ -71,7 +71,7 @@ export function NotebookViewer({ id }: { id: string }) {
         return (
           <div key={i} className="space-y-2">
             <CodeCell source={cell.source} />
-            {explanation && <ExplanationBlock text={explanation} />}
+            {explanation && <ExplanationBlock explanation={explanation} />}
             {cell.outputs.length > 0 && (
               <div className="space-y-2 pl-1">
                 {cell.outputs.map((out, j) => (
