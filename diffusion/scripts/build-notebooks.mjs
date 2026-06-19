@@ -10,7 +10,22 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..");
-const COURSE_REPO = path.resolve(PROJECT_ROOT, "..", "Diffusion_Gen_AI_Course");
+
+// Walk up from the project to find the sibling course clone, so this works
+// whether the app sits at Analysis/diffusion-study or Analysis/cube-studyroom/diffusion.
+function findCourseRepo(start) {
+  let dir = start;
+  for (let i = 0; i < 6; i++) {
+    const cand = path.join(dir, "Diffusion_Gen_AI_Course");
+    if (fs.existsSync(cand)) return cand;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return path.resolve(start, "..", "..", "Diffusion_Gen_AI_Course");
+}
+
+const COURSE_REPO = process.env.COURSE_REPO || findCourseRepo(PROJECT_ROOT);
 const OUT_DATA = path.resolve(PROJECT_ROOT, "public", "notebooks");
 const OUT_ASSETS = path.resolve(PROJECT_ROOT, "public", "nb-assets");
 
