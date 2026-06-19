@@ -7,21 +7,17 @@ const explanations: ExplanationEntry[] = [
   // 0 — imports
   {
     text: "먼저 연장통부터 펼쳐 — 앞으로 쓸 도구들을 미리 다 꺼내놓는 단계야. 각각 뭐고 이 노트북에서 어디 쓰일지는 아래에 정리해놨어.",
+    // 라이브러리는 노트북에서 실제로 쓰이는 순서대로 나열한다.
     imports: [
+      {
+        name: "sklearn.datasets",
+        what: "연습용 장난감 데이터셋 생성기",
+        use: "맨 처음 sample_data에서 make_circles·make_blobs로 학습용 2D 점부터 만들어",
+      },
       {
         name: "torch · torch.nn · F",
         what: "PyTorch — 텐서 연산과 신경망 빌딩블록",
-        use: "뒤에서 노이즈 걷어낼 Model(신경망) 정의, 노이즈 텐서 생성(randn_like), 학습 루프 전체에 쓰여",
-      },
-      {
-        name: "numpy (np)",
-        what: "수치 배열 계산 라이브러리",
-        use: "sklearn이 준 데이터를 torch 텐서로 넘기기 전 다루는 보조용",
-      },
-      {
-        name: "matplotlib.pyplot (plt)",
-        what: "기본 그래프 그리기 도구",
-        use: "alpha_bar 곡선·학습 손실 곡선 같은 일반 라인 플롯",
+        use: "만든 데이터를 텐서로 바꾸고, 노이즈 텐서 생성(randn_like), Model(신경망) 정의, 학습까지 전부",
       },
       {
         name: "seaborn (sns)",
@@ -29,9 +25,9 @@ const explanations: ExplanationEntry[] = [
         use: "데이터 점을 흩뿌리는 산점도(scatterplot)는 전부 얘로 그려",
       },
       {
-        name: "sklearn.datasets",
-        what: "연습용 장난감 데이터셋 생성기",
-        use: "make_circles·make_blobs로 학습용 2D 점 모양을 만들어",
+        name: "matplotlib.pyplot (plt)",
+        what: "기본 그래프 그리기 도구",
+        use: "산점도에 축·격자 붙이고, alpha_bar 곡선·학습 손실 곡선 같은 라인 플롯",
       },
       {
         name: "clear_output",
@@ -41,7 +37,12 @@ const explanations: ExplanationEntry[] = [
       {
         name: "time",
         what: "시간 유틸",
-        use: "time.sleep으로 애니메이션 프레임 사이에 살짝 딜레이 줄 때",
+        use: "애니메이션 루프에서 time.sleep으로 프레임 사이에 살짝 딜레이",
+      },
+      {
+        name: "numpy (np)",
+        what: "수치 배열 계산 라이브러리",
+        use: "여기선 직접 호출은 거의 없어 — sklearn·torch가 안에서 쓰는 바탕 역할",
       },
     ],
   },
