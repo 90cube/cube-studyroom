@@ -9,6 +9,7 @@ import { MarkdownCell } from "@/components/cells/MarkdownCell";
 import { CodeCell } from "@/components/cells/CodeCell";
 import { OutputCell } from "@/components/cells/OutputCell";
 import { ExplanationBlock } from "@/components/cells/ExplanationBlock";
+import { DiagramBlock } from "@/components/cells/DiagramBlock";
 import { getExplanation } from "@/data/explanations";
 
 type LoadState =
@@ -72,6 +73,7 @@ export function NotebookViewer({ id }: { id: string }) {
           <div key={i} className="space-y-2">
             <CodeCell source={cell.source} />
             {explanation && <ExplanationBlock explanation={explanation} />}
+            {explanation?.diagram && <DiagramBlock diagram={explanation.diagram} />}
             {cell.outputs.length > 0 && (
               <div className="space-y-2 pl-1">
                 {cell.outputs.map((out, j) => (

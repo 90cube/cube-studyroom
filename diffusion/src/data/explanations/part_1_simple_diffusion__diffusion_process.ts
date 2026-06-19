@@ -55,7 +55,31 @@ const explanations: ExplanationEntry[] = [
   // 4 — forward diffusion viz
   "이제 원본이 망가지는 과정을 눈으로 보여줘. 단계를 건너뛰며 매 시점마다 '원본은 조금 + 노이즈는 점점 많이' 섞은 모습을 그려. 진행될수록 동그라미가 흐려지다 결국 완전한 노이즈 구름이 되는 게 바로 forward process야.",
   // 5 — Model class
-  "노이즈를 걷어낼 신경망을 설계해. 입력은 '노이즈 낀 점의 좌표'와 '지금 몇 번째 단계인지(t)'를 같이 받아. 층을 몇 개 쌓되 매 층마다 t 정보와 원래 입력을 다시 더해줘서(skip) 모델이 시간 감각을 잃지 않게 해. 출력은 '이 점에 낀 노이즈가 뭘까'에 대한 예측이야.",
+  {
+    text: "노이즈를 걷어낼 신경망을 설계해. 입력은 '노이즈 낀 점의 좌표'와 '지금 몇 번째 단계인지(t)'를 같이 받아. 층을 몇 개 쌓되 매 층마다 t 정보와 원래 입력을 다시 더해줘서(skip) 모델이 시간 감각을 잃지 않게 해. 출력은 '이 점에 낀 노이즈가 뭘까'에 대한 예측이야.",
+    diagram: {
+      title: "Model 신경망 구조",
+      kind: "architecture",
+      summary: `flowchart TD
+  X["노이즈 낀 점 x_t"] --> H["은닉층 3개<br/>매 층에 시간·원본 재주입"]
+  T["timestep t"] --> H
+  H --> O["예측: 낀 노이즈"]`,
+      detail: `flowchart TD
+  X["x_t (2D)"] --> N1["LayerNorm"] --> F1["fc1: 2→128"] --> A1["LeakyReLU"]
+  T["t"] --> TE["time emb<br/>Linear 1→128"]
+  X --> SK["skip_fc: 2→128"]
+  A1 --> P1(("+"))
+  TE --> P1
+  SK --> P1
+  P1 --> F2["fc2: 128→128"] --> A2["LeakyReLU"] --> P2(("+"))
+  TE --> P2
+  SK --> P2
+  P2 --> F3["fc3: 128→128"] --> A3["LeakyReLU"] --> P3(("+"))
+  TE --> P3
+  SK --> P3
+  P3 --> OUT["output_fc: 128→2"] --> Y["예측 노이즈 (2D)"]`,
+    },
+  },
   // 6 — device + model
   "GPU가 있으면 GPU, 없으면 CPU를 쓰도록 정하고, 방금 설계한 모델을 그 장치에 올려. 이제부터 계산은 거기서 돌아가.",
   // 7 — training loop (imports tqdm)
@@ -68,9 +92,52 @@ const explanations: ExplanationEntry[] = [
         use: "5만 스텝 학습이 지금 어디까지 갔는지 막대로 실시간 보여줘",
       },
     ],
+    diagram: {
+      title: "학습 루프",
+      kind: "algorithm",
+      summary: `flowchart TD
+  A["원본 x0 준비"] --> B["50,000번 반복"]
+  B --> C["랜덤 t·노이즈로 x_t 생성"]
+  C --> D["모델이 노이즈 예측"]
+  D --> E["MSE로 모델 갱신"]
+  E --> B
+  B --> F["손실 곡선 출력"]`,
+      detail: `flowchart TD
+  A["x0 = sample_data()"] --> B["repeat 50,000"]
+  B --> N["noise ~ N(0, I)"]
+  N --> T["t ~ Uniform(1, T)"]
+  T --> XT["x_t = √ᾱ_t·x0 + √(1−ᾱ_t)·noise"]
+  XT --> P["noise_pred = model(x_t, t)"]
+  P --> L["loss = MSE(noise_pred, noise)"]
+  L --> O["backward + optimizer.step()"]
+  O --> B
+  B --> PLOT["loss 곡선 그리기"]`,
+    },
   },
   // 8 — DDPM sampling
-  "이번엔 거꾸로, 순수 노이즈에서 진짜 데이터를 만들어내. 완전 랜덤한 점에서 시작해 T단계를 거꾸로 내려오며, 매 단계 모델이 '낀 노이즈'를 예측하면 DDPM 공식대로 그만큼 살짝 걷어내. 0에 가까워질수록 점들이 다시 동그라미로 모이는 걸 중간중간 그려서 보여줘.",
+  {
+    text: "이번엔 거꾸로, 순수 노이즈에서 진짜 데이터를 만들어내. 완전 랜덤한 점에서 시작해 T단계를 거꾸로 내려오며, 매 단계 모델이 '낀 노이즈'를 예측하면 DDPM 공식대로 그만큼 살짝 걷어내. 0에 가까워질수록 점들이 다시 동그라미로 모이는 걸 중간중간 그려서 보여줘.",
+    diagram: {
+      title: "DDPM 샘플링 (역확산)",
+      kind: "algorithm",
+      summary: `flowchart TD
+  A["순수 노이즈 x_T"] --> B["t = T-1 … 0 반복"]
+  B --> C["모델로 노이즈 예측"]
+  C --> D["DDPM 공식으로 한 스텝 디노이즈"]
+  D --> E{"t > 0 ?"}
+  E -->|예| B
+  E -->|아니오| F["완성 샘플 x_0"]`,
+      detail: `flowchart TD
+  A["x_T ~ N(0, I)"] --> B["t: T-1 → 0"]
+  B --> C["eps = model(x_t, t)"]
+  C --> M["mu = 1/√α_t · (x_t − β_t/√(1−ᾱ_t) · eps)"]
+  M --> E{"t > 0 ?"}
+  E -->|예| Z["z ~ N(0, I)<br/>x = mu + √β_t · z"]
+  E -->|아니오| X0["x = mu (노이즈 없음)"]
+  Z --> B
+  X0 --> DONE["완성 샘플 x_0"]`,
+    },
+  },
   // 9 — sample_data blobs + labels
   "이번엔 조건부 생성을 해볼 거라 데이터를 바꿔. '4개 덩어리(blob)'를 만들고, 각 점이 몇 번 덩어리 소속인지 라벨(label)도 같이 돌려줘. 이 라벨이 곧 '어떤 클래스를 생성할지'의 조건이 될 거야.",
   // 10 — scatter hue=label
