@@ -21,6 +21,10 @@ const explanations: ExplanationEntry[] = [
         use: "float16 로 파이프라인 적재, .to('cuda')",
       },
     ],
+    lines: {
+      10: "attn_processors: U-Net 안 모든 어텐션 자리를 '이름→프로세서'로 보여줘. 어디에 무엇이 꽂혀 있나 확인.",
+      13: "set_attn_processor: U-Net 전체 어텐션 계산기를 한 줄로 교체. IP-Adapter·LoRA·슬라이싱이 다 이 후크로 끼어들어.",
+    },
   },
   // 1 — self vs cross core (algorithm)
   {
@@ -54,6 +58,12 @@ const explanations: ExplanationEntry[] = [
   MH3 --> SDPA
   SDPA --> R["reshape → 헤드 합치기"]
   R --> OUT["to_out[0] 선형 투영"]`,
+    },
+    lines: {
+      2: "Query는 '항상' 이미지 latent에서 — 이미지 쪽이 질문하는 구조. self든 cross든 여긴 안 바뀜.",
+      5: "encoder_hidden_states가 없으면 자기 자신을 K·V 출처로 → self-attention (픽셀끼리 참조).",
+      9: "K·V를 encoder_hidden_states(텍스트)에서 뽑으면 → cross-attention. 텍스트가 그림에 개입하는 바로 그 줄.",
+      19: "SDPA: softmax(Q·Kᵀ/√d)·V를 PyTorch 2.0 융합 커널로 한 방에 — 어텐션 본 계산.",
     },
   },
   // 2 — IP-Adapter swap (architecture, depth)
@@ -103,6 +113,11 @@ const explanations: ExplanationEntry[] = [
         use: "스타일 참조 이미지를 읽어 ip_adapter_image=로 전달",
       },
     ],
+    lines: {
+      10: "load_ip_adapter: cross-attn 프로세서를 IPAdapterAttnProcessor2_0로 싹 교체하고 to_k_ip/to_v_ip 가중치까지 채워.",
+      14: "set_ip_adapter_scale: __call__의 그 scale. 1.0=이미지만, 0.6쯤=텍스트와 균형.",
+      19: "ip_adapter_image=ref: 참조 이미지를 '이미지 프롬프트'로 넘겨 — 스타일/구도/얼굴을 그대로 끌고 와.",
+    },
   },
 ];
 

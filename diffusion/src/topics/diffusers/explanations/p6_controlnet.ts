@@ -26,6 +26,11 @@ const explanations: ExplanationEntry[] = [
         use: "원본 방 사진을 읽어 numpy로 변환",
       },
     ],
+    lines: {
+      9: "cv2.Canny(img, 100, 200): 두 임계값으로 윤곽선만 뽑아 — 이 엣지 맵이 '구조 조건'이 돼.",
+      10: "stack ×3: 1채널 흑백 엣지를 3채널로 복제 — ControlNet 입력이 RGB(3채널)라서 모양 맞추기.",
+      19: "controlnet=controlnet: 곁가지를 파이프라인에 결합. 본체 U-Net은 그대로, residual 배선만 자동으로 깔려.",
+    },
   },
   // 1 — pipe call
   "이제 윤곽은 고정한 채 내용만 갈아끼워. image=canny로 구조 조건을 넘기고, controlnet_conditioning_scale로 그 조건을 얼마나 강하게 따를지 정해 — 0이면 ControlNet을 통째로 무시(=일반 생성)하고, 1.0이면 윤곽을 빡세게 지켜. 0.8쯤이 보통 구조는 살리면서 프롬프트 자유도도 주는 스윗스팟이야. 같은 방 윤곽에 프롬프트만 바꾸면 가구 톤·분위기가 통째로 바뀌면서 레이아웃은 유지돼.",
@@ -48,6 +53,11 @@ const explanations: ExplanationEntry[] = [
   L2 --> L3["블록쌍 i=2<br/>Conv(96→96) · Conv stride2(96→256)"]
   L3 --> CO["conv_out = zero_module(Conv 256→320)"]
   CO --> Z["출력: 학습 초반 = 0<br/>(원본 안 건드림)"]`,
+    },
+    lines: {
+      9: "stride=2 conv: 한 블록마다 해상도 절반 — 512를 4번 줄여 64×64(U-Net 특징맵)에 맞춰.",
+      11: "conv_out을 zero_module로 감싸 0 초기화 → 'zero convolution'. ControlNet의 핵심 안전장치.",
+      23: "zero_module: 모듈의 모든 파라미터를 0으로. 그래서 학습 첫 순간 ControlNet 출력이 0 → 원본을 안 망침.",
     },
   },
   // 3 — forward residual (algorithm)
@@ -75,6 +85,11 @@ const explanations: ExplanationEntry[] = [
   LS --> R["down/mid residual 반환"]
   CS --> R
   R --> U["파이프라인: 원본 U-Net 대응 블록에 + residual"]`,
+    },
+    lines: {
+      6: "sample + controlnet_cond: 조건 임베딩을 U-Net 첫 conv 출력에 더해 — 구조 정보가 가지로 들어가는 지점.",
+      17: "down 출력들을 zero conv(controlnet_down_blocks)에 통과시켜 residual로 — 학습 초반엔 전부 0.",
+      22: "× conditioning_scale: residual 세기 조절. 이 값이 곧 controlnet_conditioning_scale로 노출돼.",
     },
   },
   // 4 — multi-controlnet

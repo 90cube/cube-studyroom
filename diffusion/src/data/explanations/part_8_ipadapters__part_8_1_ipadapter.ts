@@ -41,10 +41,22 @@ const explanations: ExplanationEntry[] = [
     ],
   },
   // 1 — SD1.5 파이프라인 로드
-  "이미지 프롬프트를 받을 본체부터 올려. SD1.5를 float16으로 불러오고 스케줄러를 DDIM으로 갈아끼워. DDIM은 매 스텝 무작위성을 안 넣는 결정론적 샘플러라 IP-Adapter 결과가 들쭉날쭉하지 않고 안정적이야(공식 문서도 얼굴/스타일엔 DDIM·Euler를 권장해). 아직 IP-Adapter는 안 붙였고, 순수 SD 상태야.",
+  {
+    text: "이미지 프롬프트를 받을 본체부터 올려. SD1.5를 float16으로 불러오고 스케줄러를 DDIM으로 갈아끼워. DDIM은 매 스텝 무작위성을 안 넣는 결정론적 샘플러라 IP-Adapter 결과가 들쭉날쭉하지 않고 안정적이야(공식 문서도 얼굴/스타일엔 DDIM·Euler를 권장해). 아직 IP-Adapter는 안 붙였고, 순수 SD 상태야.",
+    lines: {
+      4: "safety_checker=None — NSFW 필터 끄기. 메모리 아끼고 검열 단계 건너뛰려고. 연구·실습용.",
+      5: "torch_dtype=torch.float16 — 가중치를 반정밀도로. VRAM 절반, 속도 빠름.",
+      7: "스케줄러를 DDIM으로 교체. from_config로 기존 설정(스텝 수 등)은 유지하면서 샘플러 알고리즘만 바꿔.",
+    },
+  },
   // 2 — IP-Adapter 가중치 로드 (plus)
   {
     text: "이제 SD에 IP-Adapter를 끼워. h94/IP-Adapter 저장소에서 'ip-adapter-plus_sd15' 가중치를 불러와. plus 변형은 이미지를 한 덩어리 토큰이 아니라 여러 patch 임베딩으로 잘게 쪼개 ViT-H 인코더로 인코딩해서, 일반 버전보다 디테일(질감·구도)을 훨씬 풍부하게 옮겨와. 파일이 ~100MB로 작은 이유는 UNet 본체는 그대로고 '이미지→cross-attention' 투영 가중치만 들었기 때문이야.",
+    lines: {
+      2: "\"h94/IP-Adapter\" — 허깅페이스 저장소 ID. 여기서 어댑터 가중치를 받아와.",
+      3: "subfolder='models' — 저장소 안에서 가중치가 들어있는 하위 폴더 지정.",
+      4: "weight_name 으로 변형 선택. 'plus'=patch 임베딩 기반 고디테일 버전, 'sd15'=SD1.5 호환.",
+    },
     diagram: {
       title: "IP-Adapter 분리형 cross-attention",
       kind: "architecture",
@@ -71,9 +83,24 @@ const explanations: ExplanationEntry[] = [
     },
   },
   // 3 — 이미지 변형 생성 (prompt='')
-  "텍스트 없이 이미지만으로 변형을 만들어봐. set_ip_adapter_scale(1.0)으로 '온전히 이미지 프롬프트만 따르라'고 못박고, prompt=''에 guidance_scale=1(텍스트 안내 끔), ip_adapter_image=참조 이미지로 5장을 뽑아. 같은 사람의 분위기·옷·구도를 유지한 채 미묘하게 다른 변형들이 나와 — '이 이미지 같은 느낌'을 양산하는 거야. 이게 IP-Adapter의 가장 순수한 동작: 그림 한 장이 곧 프롬프트.",
+  {
+    text: "텍스트 없이 이미지만으로 변형을 만들어봐. set_ip_adapter_scale(1.0)으로 '온전히 이미지 프롬프트만 따르라'고 못박고, prompt=''에 guidance_scale=1(텍스트 안내 끔), ip_adapter_image=참조 이미지로 5장을 뽑아. 같은 사람의 분위기·옷·구도를 유지한 채 미묘하게 다른 변형들이 나와 — '이 이미지 같은 느낌'을 양산하는 거야. 이게 IP-Adapter의 가장 순수한 동작: 그림 한 장이 곧 프롬프트.",
+    lines: {
+      1: "set_ip_adapter_scale(1.0) — 이미지 프롬프트의 영향력을 최대로. 1.0이면 거의 이미지에만 의존.",
+      7: "prompt=\"\" — 텍스트 프롬프트 비움. 오직 이미지만으로 그리게.",
+      8: "ip_adapter_image=image — 바로 이 인자가 IP-Adapter의 입구. 참조 이미지가 여기로 들어가.",
+      9: "guidance_scale=1 — 텍스트 CFG 사실상 끔. 프롬프트가 비었으니 텍스트 안내 의미 없음.",
+    },
+  },
   // 4 — IP-Adapter scale 스윕
-  "이미지를 얼마나 강하게 따를지(set_ip_adapter_scale)를 0.2→1.8로 훑어. 낮으면 참조를 살짝만 참고해 자유롭게 변형되고(1.0이 '이미지에만 의존'), 높이면(>1.0) 참조에 과하게 매달려 점점 뭉개지기도 해. 이 다이얼이 '이미지 충실도'의 핵심 조절기야 — 실전에선 보통 0.4~0.8 사이에서 텍스트와 이미지의 균형점을 찾아 써. 시드를 0으로 고정해 scale 효과만 깨끗이 비교해.",
+  {
+    text: "이미지를 얼마나 강하게 따를지(set_ip_adapter_scale)를 0.2→1.8로 훑어. 낮으면 참조를 살짝만 참고해 자유롭게 변형되고(1.0이 '이미지에만 의존'), 높이면(>1.0) 참조에 과하게 매달려 점점 뭉개지기도 해. 이 다이얼이 '이미지 충실도'의 핵심 조절기야 — 실전에선 보통 0.4~0.8 사이에서 텍스트와 이미지의 균형점을 찾아 써. 시드를 0으로 고정해 scale 효과만 깨끗이 비교해.",
+    lines: {
+      5: "scale 값을 0.2~1.8로 바꿔가며 한 장씩. 같은 입력에 강도만 다르게.",
+      6: "루프 안에서 매번 set_ip_adapter_scale로 강도 갱신. 이 한 줄이 비교의 핵심 변수.",
+      14: "generator=torch.manual_seed(0) — 시드 고정. 노이즈를 똑같이 깔아야 scale 효과만 순수 비교돼.",
+    },
+  },
   // 5 — img2img 파이프라인(from_pipe)
   "이번엔 IP-Adapter를 img2img에 붙여. 이미 만든 파이프라인 부품을 from_pipe로 그대로 재활용해 StableDiffusionImg2ImgPipeline을 만들어(모델 재로드 없이 메모리 공유). img2img는 '시작 이미지(base)'에서 출발하니까, 'base의 구도 위에 + 참조 이미지의 스타일'을 합성하는 셋업이야.",
   // 6 — 두 이미지 로드 + 표시

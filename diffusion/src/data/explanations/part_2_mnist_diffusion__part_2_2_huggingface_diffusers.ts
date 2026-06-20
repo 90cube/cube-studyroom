@@ -47,7 +47,10 @@ const explanations: ExplanationEntry[] = [
   "DataLoader로 묶음 공급 세팅. 이번엔 batch_size=64로 키웠어 — diffusers UNet이 가벼워서 한 번에 더 많이 먹여도 GPU가 버텨, 그만큼 학습이 빨라져. 한 배치 꺼내 모양(64,1,28,28)과 라벨을 찍고 make_grid로 64장을 격자로 띄워봐.",
   // 3 — DDPMScheduler
   {
-    text: "여기서부터 라이브러리가 일한다. 노이즈 일정표를 직접 계산하는 대신 DDPMScheduler 객체 하나를 만들어 — beta 범위(0.00085~0.012)와 'scaled_linear' 방식, 1000스텝을 넘기면 alpha·alpha_bar 같은 계수를 알아서 다 계산해서 들고 있어. scaled_linear는 Stable Diffusion이 쓰는 그 스케줄이고, prediction_type이 'epsilon'이라 '노이즈를 예측'하는 모드, variance_type은 'fixed_small'이야. print로 설정을 펼쳐보면 라이브러리가 뭘 들고 있는지 한눈에 보여.",
+    text: "여기서부터 라이브러리가 일한다. 노이즈 일정표를 직접 계산하는 대신 DDPMScheduler 객체 하나를 만들어 — beta 범위(0.00085~0.012)와 'scaled_linear' 방식, 1000스텝을 넘기면 alpha·alpha_bar 같은 계수를 알아서 다 계산해서 들고 있어. scaled_linear는 Stable Diffusion이 쓰는 그 스케줄이고, prediction_type이 'epsilon'이라 '노이즈를 예측'하는 모드, variance_type은 'fixed_small'이야. print로 설정을 펼쳐보면 라이브러리가 뭘 들고 있는지 한눈에 보여. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      3: "이 한 줄이 Part 2-1의 betas·alphas·alpha_bars 손계산을 통째로 대체해 — 인자만 넘기면 객체가 내부에 다 계산해 들고 있어. beta_schedule='scaled_linear'는 beta가 아니라 √beta를 선형으로 깔아 SD가 쓰는 그 방식.",
+    },
     diagram: {
       title: "DDPMScheduler — 스케줄을 객체가 대신 관리",
       kind: "architecture",
@@ -77,7 +80,14 @@ const explanations: ExplanationEntry[] = [
   },
   // 6 — UNet2DModel
   {
-    text: "UNet도 손으로 안 짜고 UNet2DModel로 꺼내 조립해. 28×28 입력, 1채널 흑백, 블록당 ResNet 2겹. 블록 출력 채널을 (32,32,64)로 키우는 3단 내리막/오르막인데, 가장 깊은 단만 'Attn~Block'이라 self-attention이 붙어 — 작은 해상도에서 픽셀끼리 전역으로 관계를 보게 하는 거야. 핵심은 class_embed_type='timestep' + num_class_embeds=10 — 숫자 라벨 0~9를 시간 임베딩이랑 같은 방식으로 녹여 조건부 생성을 켜는 스위치야. 앞 노트북에서 class MLP를 직접 더하던 걸 이 옵션 두 개가 대신해.",
+    text: "UNet도 손으로 안 짜고 UNet2DModel로 꺼내 조립해. 28×28 입력, 1채널 흑백, 블록당 ResNet 2겹. 블록 출력 채널을 (32,32,64)로 키우는 3단 내리막/오르막인데, 가장 깊은 단만 'Attn~Block'이라 self-attention이 붙어 — 작은 해상도에서 픽셀끼리 전역으로 관계를 보게 하는 거야. 핵심은 class_embed_type='timestep' + num_class_embeds=10 — 숫자 라벨 0~9를 시간 임베딩이랑 같은 방식으로 녹여 조건부 생성을 켜는 스위치야. 앞 노트북에서 class MLP를 직접 더하던 걸 이 옵션 두 개가 대신해. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      9: "내리막 3단의 종류. 앞 둘은 평범한 DownBlock, 가장 깊은 단만 'Attn~'이라 self-attention이 붙어 — 해상도가 작아진 곳에서만 픽셀끼리 전역 관계를 봐(큰 해상도에 attention 깔면 메모리 폭발).",
+      11: "오르막은 내리막을 거울처럼 뒤집은 순서 — 깊은 쪽(Attn)부터 풀어 올라와.",
+      12: "단별 채널 수 (32,32,64). 깊을수록 채널을 늘려 더 추상적인 특징을 담아.",
+      13: "class_embed_type='timestep' — 클래스 라벨을 시간이랑 똑같은 임베딩 방식으로 녹여 넣겠다는 뜻.",
+      14: "num_class_embeds=10 — 0~9 열 개 클래스. 이 두 줄이 Part 2-1에서 손으로 더하던 class MLP를 대신해 조건부 생성을 켜.",
+    },
     diagram: {
       title: "UNet2DModel 구성 (라이브러리 UNet)",
       kind: "architecture",
@@ -129,7 +139,15 @@ const explanations: ExplanationEntry[] = [
   "방금 만든 함수를 학습 전에 한 번 돌려봐. 모델이 아직 백지라 결과는 의미 없는 얼룩이 나올 거야 — 일부러 '학습 전엔 이렇게 엉망'이라는 출발선을 찍어두고, 나중 결과랑 비교하려는 거야. (config 직접 접근 deprecation 경고는 떠도 동작엔 지장 없어.)",
   // 12 — training loop
   {
-    text: "본 게임 — 10에폭 학습. MSE + AdamW(lr=1e-3)로, 배치마다: 노이즈 뽑고 랜덤 t 골라 add_noise로 더럽힌 다음, UNet에 라벨까지 줘서 노이즈를 예측(.sample), 진짜 노이즈와의 MSE로 backward·step. 앞 노트북이랑 뼈대는 똑같은데 손계산이 전부 라이브러리 호출로 바뀐 게 포인트야. 매 에폭 generate_image로 숫자가 또렷해지는 걸 보고, 최근 100개 손실 평균을 찍어 진척을 확인해. 실전 응용 한 입 — 바로 이 'UNet2DModel + DDPMScheduler + add_noise/step' 조합이 diffusers 생태계의 표준 레시피라, 여기서 데이터를 셀럽 얼굴·풍경·의료 영상으로 바꾸고 모델만 키우면 그대로 제품용 생성 파이프라인이 돼.",
+    text: "본 게임 — 10에폭 학습. MSE + AdamW(lr=1e-3)로, 배치마다: 노이즈 뽑고 랜덤 t 골라 add_noise로 더럽힌 다음, UNet에 라벨까지 줘서 노이즈를 예측(.sample), 진짜 노이즈와의 MSE로 backward·step. 앞 노트북이랑 뼈대는 똑같은데 손계산이 전부 라이브러리 호출로 바뀐 게 포인트야. 매 에폭 generate_image로 숫자가 또렷해지는 걸 보고, 최근 100개 손실 평균을 찍어 진척을 확인해. 실전 응용 한 입 — 바로 이 'UNet2DModel + DDPMScheduler + add_noise/step' 조합이 diffusers 생태계의 표준 레시피라, 여기서 데이터를 셀럽 얼굴·풍경·의료 영상으로 바꾸고 모델만 키우면 그대로 제품용 생성 파이프라인이 돼. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      22: "배치 안 각 이미지마다 0~998 사이 무작위 t. .long()은 정수 타입 — 인덱스로 쓰려면 정수여야 해.",
+      23: "scheduler.add_noise 한 줄이 Part 2-1의 '√ᾱ·x + √(1−ᾱ)·noise' 손계산을 대체 — 라이브러리가 알아서 그 t의 계수를 곱해.",
+      26: "라이브러리 모델은 텐서를 바로 안 주고 출력 객체로 감싸 — .sample을 붙여야 진짜 예측 노이즈 텐서가 나와.",
+      29: "예측 노이즈 vs 진짜 노이즈의 MSE. 손계산이든 라이브러리든 학습 목표는 똑같아.",
+      32: "zero_grad로 먼저 기울기 비우고(누적 방지),",
+      34: "step으로 한 발 갱신. backward→step 순서만 지키면 zero_grad 위치는 자유로워.",
+    },
     diagram: {
       title: "학습 루프 (diffusers 버전)",
       kind: "algorithm",

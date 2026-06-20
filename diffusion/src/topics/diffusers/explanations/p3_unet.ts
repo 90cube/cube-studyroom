@@ -16,6 +16,11 @@ const explanations: ExplanationEntry[] = [
         use: "randn으로 더미 latent/임베딩 만들고 timestep 텐서 구성, .to('cuda')",
       },
     ],
+    lines: {
+      6: "subfolder='unet': SD repo 안의 unet 폴더만 콕 집어 로드 — VAE·텍스트인코더는 빼고 U-Net 가중치만.",
+      9: "(1,4,64,64) = (배치, latent 4채널, 64×64). SD latent의 표준 모양 — 512px 이미지가 VAE로 64×64×4로 압축된 것.",
+      13: ".sample: U-Net 출력에서 예측 노이즈 텐서를 꺼내. encoder_hidden_states=로 텍스트를 넘기는 게 핵심.",
+    },
   },
   // 1 — timestep embedding
   {
@@ -41,6 +46,11 @@ const explanations: ExplanationEntry[] = [
   E1 --> E2
   EH --> PE["process_encoder_hidden_states<br/>(IP-Adapter면 (text,image) 튜플)"]
   S["sample (latent)"] --> CI["conv_in"]`,
+    },
+    lines: {
+      2: "get_time_embed: 정수 스텝 t를 사인/코사인 주파수 벡터로 펼쳐 — 숫자 하나를 신경망이 쓸 벡터로.",
+      3: "time_embedding(MLP): 그 벡터를 emb로 변환. 이 emb가 모든 ResNet 블록에 더해져 '노이즈 레벨'을 알려줌 → 가중치 한 벌로 전 스텝 처리.",
+      20: "conv_in: latent를 첫 conv로 채널 폭 확장 — 이제부터 down/mid/up 본체로 들어가.",
     },
   },
   // 2 — down/mid/up + cross-attention (architecture)
@@ -98,6 +108,11 @@ const explanations: ExplanationEntry[] = [
         use: "canny edge 조건맵을 읽어 pipe(image=...)에 전달",
       },
     ],
+    lines: {
+      11: "controlnet=controlnet: 곁가지를 파이프라인에 결합. 이 한 줄로 residual 배선이 자동으로 깔려.",
+      19: "image=canny: 윤곽 맵을 조건으로 줘 — ControlNet이 이걸 보고 블록별 residual을 만들어 형태를 잡아.",
+      20: "controlnet_conditioning_scale: residual을 얼마나 세게 더할지. 높이면 윤곽을 빡세게 따르고, 낮추면 느슨하게.",
+    },
   },
 ];
 

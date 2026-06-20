@@ -33,7 +33,13 @@ const explanations: ExplanationEntry[] = [
   // 1 — base pipeline + DDIM
   "비교 기준으로 보통 SD1.5 파이프라인을 fp16으로 불러오고 스케줄러는 DDIM. 아직 아무 가속도 안 건 평범한 상태야 — DDIM은 보통 20~30스텝은 줘야 그림이 멀쩡하게 나와. 이걸 기억해두고 곧 LCM과 비교해.",
   // 2 — base SD at 4 steps (intentionally bad)
-  "일부러 보통 SD를 4스텝만 줘서 10개 프롬프트를 뽑아봐. 결과가 흐리고 덜 완성돼 보일 거야 — 당연해, DDIM한테 4스텝은 너무 적거든. 이 '망한 4스텝'이 바로 다음에 LCM이 해결할 문제를 보여주는 장치야. (같은 4스텝인데 LCM은 얼마나 다른지 곧 보게 돼.)",
+  {
+    text: "일부러 보통 SD를 4스텝만 줘서 10개 프롬프트를 뽑아봐. 결과가 흐리고 덜 완성돼 보일 거야 — 당연해, DDIM한테 4스텝은 너무 적거든. 이 '망한 4스텝'이 바로 다음에 LCM이 해결할 문제를 보여주는 장치야. (같은 4스텝인데 LCM은 얼마나 다른지 곧 보게 돼.)",
+    lines: {
+      21: "guidance_scale=7.5 — 보통 SD의 표준 CFG. (곧 LCM에선 이걸 0으로 꺼야 한다는 점과 대비돼.)",
+      22: "num_inference_steps=4 — 일부러 4스텝만. DDIM엔 턱없이 부족해 결과가 망가지는 게 핵심.",
+    },
+  },
   // 3 — swap to LCMScheduler
   {
     text: "스케줄러를 LCMScheduler로 갈아끼워. LCM(Latent Consistency Model)은 보통 디퓨전처럼 노이즈를 찔끔찔끔 여러 번 걷어내는 대신, '노이즈 낀 상태에서 곧장 깨끗한 결과로 점프'하도록 distill(증류)된 방식이라 2~4스텝이면 충분해. 스케줄러만 바꾼 거고, 실제 가속 능력은 다음 셀에서 LCM-LoRA를 얹어야 생겨.",
@@ -65,7 +71,14 @@ const explanations: ExplanationEntry[] = [
     },
   },
   // 6 — LCM generation at 4 steps (good)
-  "이제 LCM-LoRA를 켠 채 똑같이 4스텝으로 10장을 다시 뽑아 2번 결과와 비교해 — 같은 4스텝인데 훨씬 또렷하고 완성도 높게 나올 거야. 핵심 차이 둘: num_inference_steps=4(LCM이라 충분), 그리고 guidance_scale=0(LCM에선 CFG를 꺼야 함 — 켜면 오히려 깨져). 이게 LCM이 '실시간 미리보기·라이브 캔버스·대량 생성'에 쓰이는 이유야. 한 장당 시간이 1/5~1/8로 줄어드니까.",
+  {
+    text: "이제 LCM-LoRA를 켠 채 똑같이 4스텝으로 10장을 다시 뽑아 2번 결과와 비교해 — 같은 4스텝인데 훨씬 또렷하고 완성도 높게 나올 거야. 핵심 차이 둘: num_inference_steps=4(LCM이라 충분), 그리고 guidance_scale=0(LCM에선 CFG를 꺼야 함 — 켜면 오히려 깨져). 이게 LCM이 '실시간 미리보기·라이브 캔버스·대량 생성'에 쓰이는 이유야. 한 장당 시간이 1/5~1/8로 줄어드니까.",
+    lines: {
+      21: "guidance_scale=0 — LCM의 필수 설정. CFG를 꺼. 2번과 정반대 — 켜면 LCM 결과가 오히려 깨져.",
+      22: "num_inference_steps=4 — 2번과 똑같은 4스텝인데, LCM-LoRA 덕에 이번엔 또렷하게 나와.",
+      25: "cross_attention_kwargs={\"scale\": 1.0} — LCM-LoRA를 full로 적용. 가속 능력을 100% 켜는 셈.",
+    },
+  },
   // 7 — ControlNet + LCM pipeline
   {
     text: "마지막으로 LCM을 ControlNet과 합쳐. ControlNet은 '구도(여기선 캐니 윤곽선)'를 입력으로 받아 생성 결과의 자세·외곽을 잡아주는 추가 제어 장치야. 여기에 LCM 스케줄러를 끼우면 '구도는 정확히 따르면서 4스텝으로 빠르게' 뽑는 조합이 돼 — 정밀 제어와 속도를 동시에. ControlNet 모델과 SD 파이프라인을 fp16으로 불러 LCMScheduler를 꽂는 단계야.",
@@ -82,6 +95,11 @@ const explanations: ExplanationEntry[] = [
   // 8 — build canny control image
   {
     text: "ControlNet에 먹일 '구도 지도'를 만들어. 참조 이미지를 받아 512×512로 맞춘 뒤 OpenCV 캐니(Canny) 엣지 검출로 윤곽선만 추출해 — 색·질감은 버리고 '형태의 뼈대'만 남기는 거야. 흑백 엣지를 3채널로 복제해 control_image로 쓰고, 원본과 나란히 그려 확인해.",
+    lines: {
+      9: "cv2.Canny(image, 100, 200) — 캐니 엣지 검출. 두 임계값 사이 기울기를 윤곽선으로. 형태의 뼈대만 추출.",
+      10: "image[:, :, None] — (H,W) 흑백에 채널 축을 붙여 (H,W,1)로. 다음 줄에서 3채널로 쌓으려고.",
+      11: "같은 엣지를 3번 옆으로 붙여 (H,W,3) RGB로. ControlNet 입력이 3채널이라 흑백을 회색 RGB로 위장.",
+    },
     diagram: {
       title: "캐니 엣지 → 구도 지도",
       kind: "algorithm",
@@ -93,7 +111,14 @@ const explanations: ExplanationEntry[] = [
     },
   },
   // 9 — generate with ControlNet + LCM
-  "캐니 윤곽선을 따라 'a white paradise bird in the snow'를 4스텝으로 생성해. controlnet_conditioning_scale=0.8로 '구도를 얼마나 강하게 따를지'를 조절하고, LCM 덕에 단 4스텝이면 끝나. 원본·구도지도·생성결과 셋을 나란히 깔면 '윤곽은 똑같은데 내용은 새 프롬프트로 채워진' 결과가 보일 거야 — 빠른 제어 생성의 완성형이지.",
+  {
+    text: "캐니 윤곽선을 따라 'a white paradise bird in the snow'를 4스텝으로 생성해. controlnet_conditioning_scale=0.8로 '구도를 얼마나 강하게 따를지'를 조절하고, LCM 덕에 단 4스텝이면 끝나. 원본·구도지도·생성결과 셋을 나란히 깔면 '윤곽은 똑같은데 내용은 새 프롬프트로 채워진' 결과가 보일 거야 — 빠른 제어 생성의 완성형이지.",
+    lines: {
+      3: "num_inference_steps=4 — LCM 스케줄러라 4스텝으로 충분. ControlNet과 합쳐도 속도 유지.",
+      4: "image=control_image — 여기 들어간 캐니 엣지가 결과의 구도/외곽을 고정.",
+      5: "controlnet_conditioning_scale=0.8 — 윤곽선을 얼마나 강하게 따를지. 낮으면 자유롭게, 높으면 엄격히.",
+    },
+  },
   // 10 — (empty trailing cell)
   "비어 있는 마지막 셀 — 실행해도 아무 일도 안 일어나. 노트북 끝에 흔히 남는 빈 칸이야.",
 ];

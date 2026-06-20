@@ -72,7 +72,12 @@ const explanations: ExplanationEntry[] = [
   },
   // 4 — collate_fn + DataLoader
   {
-    text: "배치를 어떻게 묶을지 collate_fn으로 직접 정하고 DataLoader를 만들어. 샘플마다 pixel_values를 모아 torch.stack으로 한 텐서로 쌓고, gender 라벨은 long으로 바꾼 뒤 −1을 빼 — 데이터의 1/2를 모델이 좋아하는 0/1로 옮기는 거야(클래스 인덱스는 0부터 시작해야 임베딩 테이블이 깔끔해). batch_size=4로 작게 잡았는데, 64×64 컬러 + 커진 UNet이라 GPU 메모리가 빡빡해서 그래.",
+    text: "배치를 어떻게 묶을지 collate_fn으로 직접 정하고 DataLoader를 만들어. 샘플마다 pixel_values를 모아 torch.stack으로 한 텐서로 쌓고, gender 라벨은 long으로 바꾼 뒤 −1을 빼 — 데이터의 1/2를 모델이 좋아하는 0/1로 옮기는 거야(클래스 인덱스는 0부터 시작해야 임베딩 테이블이 깔끔해). batch_size=4로 작게 잡았는데, 64×64 컬러 + 커진 UNet이라 GPU 메모리가 빡빡해서 그래. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      11: "낱장 텐서 리스트를 torch.stack으로 (4,3,64,64) 한 덩어리로 쌓아 — 모델은 배치 단위로 먹어야 빨라.",
+      12: "gender 1/2를 long()−1로 0/1로 옮겨. 임베딩 테이블은 인덱스 0부터 채우니까, 라벨도 0부터 시작해야 첫 칸이 안 비고 깔끔해.",
+      15: "batch_size=4 — 64×64 컬러에 커진 UNet이라 GPU 메모리가 빡빡해서 일부러 작게.",
+    },
     diagram: {
       title: "collate_fn — 배치 조립",
       kind: "algorithm",
@@ -116,7 +121,13 @@ const explanations: ExplanationEntry[] = [
   },
   // 8 — UNet2DModel (bigger, 64x64 RGB)
   {
-    text: "얼굴용 UNet을 UNet2DModel로 조립해 — 숫자 때보다 훨씬 무거워. 64×64 입력, in/out 3채널(RGB), 블록당 ResNet 2겹. 채널을 (64,128,160,224)로 4단까지 키우고, 첫 단 빼고 나머지 셋 다 'Attn~Block'이라 self-attention을 넉넉히 깔았어 — 얼굴은 눈·코·입의 전역 배치(좌우 대칭 같은)가 중요해서 attention이 그 장거리 관계를 잡아줘. num_class_embeds=2로 성별 0/1 조건을 켜고. (class_embed_type을 안 줘서 기본 학습형 임베딩으로 라벨이 들어가.) 그래서 파라미터가 1700만대로 확 불어.",
+    text: "얼굴용 UNet을 UNet2DModel로 조립해 — 숫자 때보다 훨씬 무거워. 64×64 입력, in/out 3채널(RGB), 블록당 ResNet 2겹. 채널을 (64,128,160,224)로 4단까지 키우고, 첫 단 빼고 나머지 셋 다 'Attn~Block'이라 self-attention을 넉넉히 깔았어 — 얼굴은 눈·코·입의 전역 배치(좌우 대칭 같은)가 중요해서 attention이 그 장거리 관계를 잡아줘. num_class_embeds=2로 성별 0/1 조건을 켜고. (class_embed_type을 안 줘서 기본 학습형 임베딩으로 라벨이 들어가.) 그래서 파라미터가 1700만대로 확 불어. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      5: "in_channels=3 — 흑백 숫자(1채널)와 달리 RGB 컬러라 입력 3채널. out도 3채널(컬러 노이즈 예측).",
+      9: "내리막 4단. Part 2-2는 가장 깊은 1단만 attention이었는데, 얼굴은 첫 단 빼고 3단이나 Attn — 눈·코·입의 좌우 대칭 같은 장거리 관계를 잡으려면 attention이 더 필요해.",
+      12: "채널 (64,128,160,224) — 숫자 때 (32,32,64)보다 훨씬 두꺼워. 복잡한 얼굴 분포를 담으려면 표현력이 더 들어.",
+      13: "num_class_embeds=2 — 성별 0/1 두 클래스. class_embed_type을 안 줬으니 기본 학습형 임베딩으로 라벨이 들어가.",
+    },
     diagram: {
       title: "UNet2DModel (얼굴용, 4단 + attention)",
       kind: "architecture",
@@ -152,7 +163,13 @@ const explanations: ExplanationEntry[] = [
   "조립한 UNet에 가짜 입력을 흘려 점검. 랜덤 이미지 5장·t 5개·성별 라벨 5개를 넣고 한 번 통과시켜 봐 — 에러 없이 forward가 끝나면 배선이 맞은 거야. (여기 테스트 입력은 128×128로 줬는데, UNet2DModel은 채널 배수만 맞으면 해상도엔 유연해서 통과해. 실제 학습은 64×64로 돌아가.)",
   // 11 — generate_image() def (DDIM, fast)
   {
-    text: "샘플 생성 함수를 정의하는데, 여기서 영리한 전환이 일어나 — 학습은 DDPM 1000스텝으로 했지만 생성은 DDIMScheduler로 갈아타. DDIMScheduler.from_config(scheduler.config)로 학습 스케줄의 설정을 그대로 물려받되, set_timesteps(50)으로 1000단계를 50단계로 확 줄여. DDIM은 매 스텝 무작위 노이즈를 안 더하는 결정론적 방식이라, 스텝을 건너뛰어도 품질이 별로 안 깨져 — 그래서 20배 빠르게 얼굴을 뽑을 수 있어. 성별 라벨 [0,0,1,1]을 줘서 조건부로 4장 생성해.",
+    text: "샘플 생성 함수를 정의하는데, 여기서 영리한 전환이 일어나 — 학습은 DDPM 1000스텝으로 했지만 생성은 DDIMScheduler로 갈아타. DDIMScheduler.from_config(scheduler.config)로 학습 스케줄의 설정을 그대로 물려받되, set_timesteps(50)으로 1000단계를 50단계로 확 줄여. DDIM은 매 스텝 무작위 노이즈를 안 더하는 결정론적 방식이라, 스텝을 건너뛰어도 품질이 별로 안 깨져 — 그래서 20배 빠르게 얼굴을 뽑을 수 있어. 성별 라벨 [0,0,1,1]을 줘서 조건부로 4장 생성해. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      7: "from_config로 학습용 DDPM의 beta·스케줄 설정을 그대로 물려받아 DDIM을 만들어 — 학습과 생성의 노이즈 규칙이 어긋나면 안 되니까.",
+      8: "set_timesteps(50)으로 1000단계를 50으로 압축. DDIM은 결정론적이라 이렇게 건너뛰어도 품질이 별로 안 깨져 → 20배 빠름.",
+      14: "매 스텝 UNet으로 노이즈 예측. 라벨을 같이 줘서 성별 조건을 반영. .sample로 텐서 꺼내.",
+      17: "inf_scheduler.step(...).prev_sample 한 줄이 DDIM 역확산 한 칸 — μ 계산·노이즈 제거를 통째로 맡겨.",
+    },
     diagram: {
       title: "DDIM 샘플링 (학습 1000 → 생성 50스텝)",
       kind: "algorithm",
@@ -171,7 +188,13 @@ const explanations: ExplanationEntry[] = [
   "학습 전에 한 번 돌려 출발선을 찍어. 모델이 백지라 컬러 얼룩만 나올 거야 — '아직 아무것도 못 배운 상태'를 기록해두고, 학습 뒤 결과랑 대조하려는 거야. DDIM이라 50스텝이라 그래도 금방 끝나.",
   // 13 — training loop (step budget, 50k)
   {
-    text: "본 게임 — 5만 스텝 학습. 에폭 수가 아니라 'num_steps < 50000'으로 도는 게 포인트야. batch_size=4로 작게 먹이는 대신 스텝을 아주 많이 밟아 누적으로 학습량을 채우는 전략 — 작은 GPU로 얼굴 같은 무거운 데이터를 학습할 때 흔히 쓰는 방식이야(큰 배치 한 방 대신 작은 배치 다발). MSE+AdamW(1e-3)로 매 배치: 노이즈·랜덤 t로 더럽히고, UNet에 성별 라벨까지 줘 노이즈 예측(.sample), MSE로 backward·step. 500스텝마다 손실 평균을 찍고 DDIM으로 얼굴을 생성해 진척을 봐. (셀 끝의 KeyboardInterrupt는 5만 스텝이 오래 걸려 중간에 손으로 멈춘 흔적이야 — 에러 아님.) 실전 응용으로 보면 이 구조가 바로 '내 데이터셋으로 처음부터 도메인 특화 생성 모델 만들기'의 표준 틀이야 — 얼굴 대신 제품 사진·패션·캐릭터 아트를 넣고 라벨만 바꾸면, 조건부로 원하는 카테고리를 뽑아내는 맞춤 생성기가 돼.",
+    text: "본 게임 — 5만 스텝 학습. 에폭 수가 아니라 'num_steps < 50000'으로 도는 게 포인트야. batch_size=4로 작게 먹이는 대신 스텝을 아주 많이 밟아 누적으로 학습량을 채우는 전략 — 작은 GPU로 얼굴 같은 무거운 데이터를 학습할 때 흔히 쓰는 방식이야(큰 배치 한 방 대신 작은 배치 다발). MSE+AdamW(1e-3)로 매 배치: 노이즈·랜덤 t로 더럽히고, UNet에 성별 라벨까지 줘 노이즈 예측(.sample), MSE로 backward·step. 500스텝마다 손실 평균을 찍고 DDIM으로 얼굴을 생성해 진척을 봐. (셀 끝의 KeyboardInterrupt는 5만 스텝이 오래 걸려 중간에 손으로 멈춘 흔적이야 — 에러 아님.) 실전 응용으로 보면 이 구조가 바로 '내 데이터셋으로 처음부터 도메인 특화 생성 모델 만들기'의 표준 틀이야 — 얼굴 대신 제품 사진·패션·캐릭터 아트를 넣고 라벨만 바꾸면, 조건부로 원하는 카테고리를 뽑아내는 맞춤 생성기가 돼. (보라색 줄에 마우스 올리면 줄별 풀이가 떠.)",
+    lines: {
+      14: "에폭이 아니라 'num_steps < 50000'으로 도는 게 핵심 — 작은 배치(4)로 적게 먹이는 대신 스텝을 잔뜩 밟아 학습량을 채워. dataloader를 다 돌아도 5만이 안 차면 처음부터 다시 돌아.",
+      22: "scheduler.add_noise로 원본을 랜덤 t만큼 한 방에 더럽혀 x_noised를 만들어 (forward).",
+      25: "UNet에 노이즈 이미지·t·성별 라벨까지 줘서 노이즈 예측. .sample로 텐서 꺼내.",
+      35: "매 배치 num_steps를 1씩 올려 — 이 값이 5만에 닿으면 while이 끝나. 진행도의 기준이야.",
+    },
     diagram: {
       title: "학습 루프 (스텝 예산 5만)",
       kind: "algorithm",

@@ -64,6 +64,12 @@ const explanations: ExplanationEntry[] = [
   // 4 — load all components (frozen)
   {
     text: "통짜 파이프라인 대신 부품을 하나씩 불러와: VAE(이미지↔latent 변환), U-Net(노이즈 예측), 토크나이저+텍스트 인코더(프롬프트 처리), 노이즈 스케줄러. 전부 GPU로 올린 다음 핵심 한 방 — 셋 다 requires_grad_(False)로 '얼려'. 원본 가중치는 절대 안 건드리고, 곧 붙일 LoRA 어댑터 층만 학습할 거니까.",
+    lines: {
+      3: "subfolder='vae' — SD 저장소 안에서 VAE 부품만 콕 집어 로드. 통짜 파이프라인 대신 부품별로.",
+      10: "DDPMScheduler — 학습용 스케줄러. add_noise로 forward 과정(latent에 노이즈 섞기)에 써.",
+      16: "vae.requires_grad_(False) — VAE 동결. 기울기 안 흘러 가중치 안 변함.",
+      18: "unet도 동결. 원본은 통째로 잠그고, 곧 add_adapter로 붙일 LoRA 층만 학습 대상이 돼.",
+    },
     diagram: {
       title: "부품 로드 + 동결(freeze)",
       kind: "architecture",
@@ -105,6 +111,13 @@ const explanations: ExplanationEntry[] = [
   // 11 — LoRA config + add_adapter
   {
     text: "드디어 LoRA를 설계해서 U-Net에 붙여. r=32는 보정 행렬의 '랭크(용량)' — 클수록 표현력↑·파일↑. lora_alpha는 그 효과의 세기 스케일. init은 가우시안 랜덤으로 시작. 핵심은 target_modules — 어텐션의 to_k·to_q·to_v·to_out에만 LoRA를 꽂아. add_adapter 한 줄이면 그 자리마다 작은 A·B 행렬이 끼워지고, 이제 학습 대상은 오직 이 A·B뿐이야.",
+    lines: {
+      3: "r=32 — LoRA 랭크. A·B 행렬의 가운데 차원. 클수록 표현력·파일 크기 둘 다 ↑. 흔히 4~64.",
+      4: "lora_alpha=32 — LoRA 출력에 곱하는 스케일(실효 세기 ≈ alpha/r). 보통 r과 같게 둬.",
+      5: "init_lora_weights=\"gaussian\" — A를 가우시안 랜덤, B를 0으로 초기화. 처음엔 영향 0에서 출발해 학습으로 키워.",
+      6: "target_modules — LoRA를 꽂을 층 이름. 어텐션의 to_q/k/v와 출력 투영(to_out.0)에만. 여기가 화풍·주제를 좌우.",
+      9: "unet.add_adapter — 위 설정대로 각 타깃 층 옆에 A·B를 삽입. 이 줄 이후 학습 대상은 A·B뿐.",
+    },
     diagram: {
       title: "LoRA 어댑터 부착",
       kind: "architecture",
@@ -118,7 +131,15 @@ const explanations: ExplanationEntry[] = [
   // 12 — inspect requires_grad
   "U-Net의 모든 파라미터를 훑으며 '학습됨(True)/동결됨(False)'을 찍어봐. 출력에서 base_layer.weight는 전부 False, lora_A·lora_B만 True로 뜨면 제대로 된 거야 — 거대한 원본은 잠겨 있고 우리가 끼운 작은 LoRA만 학습되는 상태를 눈으로 검증하는 셈이지.",
   // 13 — optimizer
-  "옵티마이저를 준비해. filter로 'requires_grad=True인 파라미터' 즉 LoRA의 A·B만 골라서 AdamW에 넘겨 — 원본은 어차피 안 움직이니 빼는 거야. 학습률 1e-4에 weight_decay로 살짝 규제를 걸고, unet.train()으로 모델을 학습 모드로 전환해.",
+  {
+    text: "옵티마이저를 준비해. filter로 'requires_grad=True인 파라미터' 즉 LoRA의 A·B만 골라서 AdamW에 넘겨 — 원본은 어차피 안 움직이니 빼는 거야. 학습률 1e-4에 weight_decay로 살짝 규제를 걸고, unet.train()으로 모델을 학습 모드로 전환해.",
+    lines: {
+      3: "filter(lambda p: p.requires_grad, ...) — 학습 가능한 파라미터(=LoRA A·B)만 추려. 동결된 원본은 자동 제외.",
+      6: "lr=1e-4 — 학습률. LoRA 미세조정에서 흔한 값. 너무 크면 발산, 작으면 더디게 배움.",
+      8: "weight_decay=1e-2 — 가중치를 0쪽으로 살짝 당기는 규제. 과적합 완화.",
+      12: "unet.train() — 학습 모드 전환. 드롭아웃 등 학습용 동작 활성화.",
+    },
+  },
   // 14 — generate_and_save helper
   {
     text: "학습 도중 'LoRA가 지금 얼마나 platypus를 배웠나' 눈으로 보려고, 현재 U-Net으로 4장 뽑아 PNG로 저장하는 헬퍼를 정의해. 동결된 VAE·텍스트 인코더·토크나이저에 '지금 학습 중인 U-Net'을 합쳐 임시 파이프라인을 조립하고, DDIM 스케줄러로 'platypus' 4장을 생성해 격자로 저장한 뒤 메모리를 비워. 학습 자체엔 영향 없는 '중간 점검 카메라'야.",
@@ -135,6 +156,17 @@ const explanations: ExplanationEntry[] = [
   // 15 — training loop
   {
     text: "학습 루프 본체 — 5000스텝 동안 돌려. 한 스텝마다: (1) 사진을 latent로, 캡션을 임베딩으로 인코딩하고 (2) latent에 무작위 timestep만큼 노이즈를 섞어(forward) (3) U-Net한테 '낀 노이즈 맞혀봐' 시킨 뒤 (4) 실제 노이즈와의 MSE 오차로 LoRA를 조금씩 고쳐. 메모리 절약 위해 4스텝 모은 뒤 한 번 갱신(gradient accumulation)하고, 1000스텝마다 LoRA 체크포인트를 저장하고 중간 샘플을 뽑아. 끝나면 손실 곡선을 그려 — 내려가면 platypus를 배우고 있는 거야.",
+    lines: {
+      22: "latent에 scaling_factor를 곱해 SD가 학습된 규약 크기로. VAE 인코딩의 표준 후처리.",
+      25: "noise = torch.randn_like(...) — latent와 같은 모양의 무작위 가우시안 노이즈. 이게 곧 정답(맞힐 대상).",
+      29: "각 이미지에 무작위 timestep을 하나씩 뽑아. 매 스텝 다른 노이즈 강도로 학습해 전 구간을 골고루.",
+      33: "add_noise — forward diffusion. latent에 t만큼의 노이즈를 실제로 섞어 noisy 입력을 만들어.",
+      37: "unet(noisy, t, encoder_hidden) — U-Net이 '낀 노이즈'를 예측. 이 예측이 학습의 출력.",
+      39: "MSE(예측, 실제 노이즈)를 accumulation_steps로 나눠. 4번 누적할 거라 미리 1/4로 스케일.",
+      41: "loss.backward() — 기울기 계산. requires_grad가 켜진 LoRA A·B에만 흘러.",
+      43: "4스텝마다 한 번만 step/zero_grad — gradient accumulation. 작은 배치로 큰 배치 효과, VRAM 절약.",
+      56: "get_peft_model_state_dict로 LoRA만 뽑고 convert_state_dict_to_diffusers로 diffusers가 읽을 키로 변환.",
+    },
     diagram: {
       title: "LoRA 학습 루프",
       kind: "algorithm",

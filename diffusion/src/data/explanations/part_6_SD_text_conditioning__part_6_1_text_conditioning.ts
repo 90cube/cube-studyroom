@@ -79,7 +79,12 @@ const explanations: ExplanationEntry[] = [
   },
   // 3 — tokenize a prompt manually
   {
-    text: "이제 '직접 하는 길'. 첫 단계는 토큰화야. tokenizer에 'A cat'을 주되 padding='max_length', max_length=77로 강제해 — 프롬프트가 짧든 길든 무조건 77토큰으로 맞추는 게 CLIP 규약이거든. 출력 input_ids의 shape이 (1, 77)인 걸 확인하고 내용을 찍어봐: 맨 앞 49406은 시작 토큰, 'a cat' 두 단어, 그리고 49407(끝/패딩 토큰)이 77칸을 다 채울 때까지 반복돼. 왜 항상 77이냐면, 모델이 고정 길이 텐서를 기대하기 때문이야.",
+    text: "이제 '직접 하는 길'. 첫 단계는 토큰화야. tokenizer에 'A cat'을 주되 padding='max_length', max_length=77로 강제해 — 프롬프트가 짧든 길든 무조건 77토큰으로 맞추는 게 CLIP 규약이거든. 출력 input_ids의 shape이 (1, 77)인 걸 확인하고 내용을 찍어봐: 맨 앞 49406은 시작 토큰, 'a cat' 두 단어, 그리고 49407(끝/패딩 토큰)이 77칸을 다 채울 때까지 반복돼. 왜 항상 77이냐면, 모델이 고정 길이 텐서를 기대하기 때문이야. (보라색 줄 hover 참고.)",
+    lines: {
+      3: "padding='max_length' + model_max_length(77) = 길이 무조건 77로 패딩/자르기. CLIP 고정 규약.",
+      5: "shape이 (1, 77)인지 확인 — 프롬프트 1개가 토큰 77칸으로 펴진 모양.",
+      9: "실제 ID 출력: 49406(시작) → a, cat → 49407(끝/패딩)이 77칸 채울 때까지 반복.",
+    },
     diagram: {
       title: "프롬프트 토큰화 (항상 77토큰)",
       kind: "algorithm",
@@ -103,7 +108,13 @@ const explanations: ExplanationEntry[] = [
   },
   // 5 — manual diffusion loop WITHOUT guidance
   {
-    text: "손으로 확산을 돌려봐 — 단, 아직 guidance는 없는 '맨몸' 버전. 순수 노이즈 latent(1×4×64×64)에서 출발해서 50스텝 거꾸로 내려와. 매 스텝의 핵심 한 줄은 unet(latents, t, encoder_hidden_states=text_embeddings) — 바로 여기 encoder_hidden_states로 텍스트 조건이 들어가고, UNet 안의 cross-attention 층들이 각 공간 위치에서 프롬프트 토큰을 '참조'해 가져다 써. 그게 텍스트가 그림을 조종하는 통로야. 5스텝마다 중간 latent를 VAE로 decode해 띄워서 노이즈가 점점 고양이로 모이는 과정을 지켜봐. 근데 이 맨몸 버전은 프롬프트를 느슨하게 따르는 경향이 있어 — 다음 셀에서 그걸 고쳐.",
+    text: "손으로 확산을 돌려봐 — 단, 아직 guidance는 없는 '맨몸' 버전. 순수 노이즈 latent(1×4×64×64)에서 출발해서 50스텝 거꾸로 내려와. 매 스텝의 핵심 한 줄은 unet(latents, t, encoder_hidden_states=text_embeddings) — 바로 여기 encoder_hidden_states로 텍스트 조건이 들어가고, UNet 안의 cross-attention 층들이 각 공간 위치에서 프롬프트 토큰을 '참조'해 가져다 써. 그게 텍스트가 그림을 조종하는 통로야. 5스텝마다 중간 latent를 VAE로 decode해 띄워서 노이즈가 점점 고양이로 모이는 과정을 지켜봐. 근데 이 맨몸 버전은 프롬프트를 느슨하게 따르는 경향이 있어 — 다음 셀에서 그걸 고쳐. (보라색 줄 hover 참고.)",
+    lines: {
+      6: "순수 노이즈 latent (1,4,64,64)에서 출발 — 디노이즈의 시작점.",
+      12: "★핵심: encoder_hidden_states=text_embeddings가 텍스트 조건. cross-attention이 여기서 프롬프트를 참조.",
+      13: "scheduler.step(...).prev_sample = 예측 노이즈로 latent를 한 칸 깨끗하게(x_t → x_t-1).",
+      16: "미리보기 전, 스케일을 되돌림(÷ scaling_factor) — VAE decode는 raw latent를 기대하니까.",
+    },
     diagram: {
       title: "수동 디노이즈 (guidance 없음)",
       kind: "algorithm",
@@ -131,7 +142,13 @@ const explanations: ExplanationEntry[] = [
   },
   // 7 — CFG denoising loop
   {
-    text: "이제 진짜 핵심, classifier-free guidance. 매 스텝 latent를 두 벌 복제해(torch.cat([latents]*2) → (2,4,64,64)) 한 번의 UNet 호출로 '조건부 예측'과 '무조건 예측'을 동시에 뽑아. 그다음 마법의 한 줄: noise_pred = uncond + scale·(text − uncond). 해석하면 '무조건이 기본값, 거기에 (조건−무조건)이라는 프롬프트 방향 벡터를 guidance_scale(7.5)배만큼 더 밀어준다'는 거야. 이러면 모델이 프롬프트를 훨씬 강하게 따라가 — 고양이를 시키면 확실히 고양이가 나와. scale을 키울수록 프롬프트 충실도↑(대신 과하면 인공적), 1이면 guidance 없음과 같아. 이게 거의 모든 텍스트→이미지 모델이 쓰는 표준 기법이야.",
+    text: "이제 진짜 핵심, classifier-free guidance. 매 스텝 latent를 두 벌 복제해(torch.cat([latents]*2) → (2,4,64,64)) 한 번의 UNet 호출로 '조건부 예측'과 '무조건 예측'을 동시에 뽑아. 그다음 마법의 한 줄: noise_pred = uncond + scale·(text − uncond). 해석하면 '무조건이 기본값, 거기에 (조건−무조건)이라는 프롬프트 방향 벡터를 guidance_scale(7.5)배만큼 더 밀어준다'는 거야. 이러면 모델이 프롬프트를 훨씬 강하게 따라가 — 고양이를 시키면 확실히 고양이가 나와. scale을 키울수록 프롬프트 충실도↑(대신 과하면 인공적), 1이면 guidance 없음과 같아. 이게 거의 모든 텍스트→이미지 모델이 쓰는 표준 기법이야. (보라색 줄 hover 참고.)",
+    lines: {
+      11: "latent를 2배 복제 → (2,4,64,64). 윗벌엔 조건 임베딩, 아랫벌엔 무조건 임베딩이 짝지어 들어가.",
+      18: "한 번의 UNet 출력을 둘로 쪼개기 — 조건부 예측(text)과 무조건 예측(uncond).",
+      19: "★마법의 한 줄: uncond + scale·(text − uncond). (text−uncond)가 프롬프트 방향, scale로 증폭.",
+      22: "증폭한 noise_pred로 latent를 한 칸 디노이즈. 이 한 벌(prev_sample)만 다음 스텝으로 넘어가.",
+    },
     diagram: {
       title: "Classifier-Free Guidance 루프",
       kind: "algorithm",

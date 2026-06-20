@@ -21,6 +21,10 @@ const explanations: ExplanationEntry[] = [
         use: "float16 dtype 지정과 .to('cuda')에만 가볍게 쓰여",
       },
     ],
+    lines: {
+      10: "compatibles: 이 파이프라인에 끼울 수 있는 스케줄러 클래스 목록을 출력 — 교체 가능한 후보 확인용.",
+      13: "from_config(pipe.scheduler.config): 기존 betas·timestep 설정은 물려받고 알고리즘만 DDIM으로 바꿔 다시 꽂아. 가중치는 안 건드림.",
+    },
   },
   // 1 — init: betas / alphas_cumprod
   {
@@ -33,6 +37,11 @@ const explanations: ExplanationEntry[] = [
   B --> A["alphas = 1 − betas"]
   A --> AC["alphas_cumprod ᾱ_t = 누적 곱"]
   AC --> USE["add_noise · step 이 인덱싱해서 사용"]`,
+    },
+    lines: {
+      3: "linspace(beta_start→beta_end): 노이즈 양 betas를 시작~끝까지 일직선으로 증가. 가장 기본 스케줄.",
+      8: "scaled_linear: 루트 공간에서 선형으로 깐 뒤 제곱(**2). SD가 쓰는 기본값 — latent diffusion에 맞춰 튜닝된 일정.",
+      13: "cumprod: alphas를 0..t까지 누적 곱해 ᾱ_t를 만들어. 't에 원본이 얼마나 남나'를 한 숫자로 — add_noise·step이 전부 이걸 인덱싱.",
     },
   },
   // 2 — add_noise (forward, closed-form)
@@ -56,6 +65,11 @@ const explanations: ExplanationEntry[] = [
   U1 --> M
   U2 --> M
   M --> OUT["noisy_samples"]`,
+    },
+    lines: {
+      6: "√ᾱ_t = ᾱ_t의 제곱근. timesteps로 인덱싱해 뽑아 — 원본 x_0를 얼마나 남길지 비율.",
+      11: "√(1−ᾱ_t) = 노이즈를 얼마나 부을지 비율. 6번이랑 둘을 제곱해 더하면 1이 돼.",
+      16: "닫힌형 한 방: x_t = √ᾱ_t·x_0 + √(1−ᾱ_t)·ε. 루프 없이 t단계 노이즈를 즉시 점프. 이 x_t가 학습 입력.",
     },
   },
   // 3 — DDPM step (reverse, stochastic)
@@ -83,6 +97,11 @@ const explanations: ExplanationEntry[] = [
   Q -->|예| V["variance = _get_variance(t)<br/>noise ~ N(0,I)"]
   V --> ADD["x_(t−1) = µ + √variance·noise"]
   Q -->|아니오| ADD0["x_(t−1) = µ"]`,
+    },
+    lines: {
+      9: "예측 ε을 거꾸로 풀어 '예측된 깨끗한 원본 x_0'을 역산. add_noise 공식을 x_0에 대해 푼 꼴.",
+      14: "예측 x_0와 현재 x_t를 정해진 두 계수로 가중합 → x_(t-1)의 평균 µ. 이게 DDPM 사후분포(식 7).",
+      22: "t>0이면 µ에 무작위 노이즈를 더해 → DDPM이 '확률적'인 이유. t=0이면 variance=0이라 그냥 µ로 깔끔히 끝.",
     },
   },
   // 4 — DDIM step (reverse, deterministic via eta)

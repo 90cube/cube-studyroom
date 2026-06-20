@@ -16,6 +16,11 @@ const explanations: ExplanationEntry[] = [
         use: "float16·cuda 배치",
       },
     ],
+    lines: {
+      9: "load_lora_weights: 이 한 줄이 U-Net+텍스트 인코더 양쪽에 저랭크 행렬을 자동 배선해.",
+      11: "weight_name: 리포 안에 safetensors가 여러 개일 때 어떤 파일을 쓸지 콕 집어.",
+      12: "adapter_name='ikea': 이름표. 안 붙이면 default_0가 자동 생성 — 여러 개 조합/스위칭하려면 꼭 붙여.",
+    },
   },
   // 1 — load_lora_weights internals (algorithm)
   {
@@ -64,10 +69,20 @@ const explanations: ExplanationEntry[] = [
   // 3 — set_adapters (multiple LoRA)
   {
     text: "이게 LoRA를 진짜 써먹는 방식이야. 이름 붙여 두 개를 올린 다음 set_adapters에 이름 리스트랑 adapter_weights를 줘 — 'ikea 0.7 + feng 0.8'처럼 누구를 얼마나 섞을지 레시피를 짜는 거지. 소스에서 set_adapters는 weights를 어댑터 수만큼 리스트로 펼치고(None은 1.0으로 채움), 모델별 스케일 확장 함수를 거친 뒤 set_weights_and_activate_adapters로 활성화해. 실전에서 제일 많이 쓰는 패턴이 '캐릭터 일관성 LoRA + 화풍 LoRA'를 분리해서 비중으로 조절하는 거야. set_adapters에 문자열 하나만 주면 그것만 켜지고, disable_lora()로 전부 끌 수도 있어.",
+    lines: {
+      8: "set_adapters(이름 리스트, adapter_weights): 여러 LoRA를 동시에 켜고 각 비중을 지정 — 합성 레시피.",
+      12: "문자열 하나만 주면 그 어댑터만 활성, 나머지는 꺼져 — 빠른 전환.",
+      13: "disable_lora(): 모든 LoRA를 끄고 본체만으로 — 가중치는 메모리에 남아 다시 켤 수 있음.",
+    },
   },
   // 4 — fuse_lora
   {
     text: "배포용 최적화야. LoRA를 켜둔 채 추론하면 매 스텝마다 W·x 말고 (W + scale·B·A)·x를 계산하느라 분기가 하나 더 생겨서 약간 느려. fuse_lora는 아예 W ← W + scale·B·A로 본체 가중치에 더해버려서 그 분기를 없애 — 소스를 보면 모델의 모든 PEFT 레이어(BaseTunerLayer)를 순회하면서 scale_layer로 세기를 적용하고 module.merge()를 불러. 합치고 나면 unload_lora_weights로 LoRA 객체를 떼고 save_pretrained 하면, 어댑터 없이도 그 스타일이 박힌 단일 모델이 돼. 로드 한 번에 분기 0이라 서빙이 빨라지고 메모리도 줄어. 단일 LoRA만 융합했다면 unfuse_lora로 되돌릴 수 있어.",
+    lines: {
+      2: "fuse_lora: W ← W + lora_scale·B·A로 LoRA를 본체에 직접 합쳐 — 추론 시 분기 제거.",
+      3: "unload_lora_weights: 이미 본체에 녹였으니 LoRA 객체는 떼버려 — 메모리 정리.",
+      4: "save_pretrained: 어댑터 없이도 그 스타일이 박힌 단일 모델로 저장 — 서빙 배포용.",
+    },
   },
   // 5 — textual inversion
   {

@@ -56,7 +56,14 @@ const explanations: ExplanationEntry[] = [
     ],
   },
   // 1 — Canny 엣지 맵 준비 + 시각화
-  "원본 사진에서 ControlNet이 따라갈 '구조 지도'를 만들어. 512×512로 맞춘 뒤 cv2.Canny로 외곽선만 뽑아(임계값 100/200). 엣지는 흑백 1채널이라, 같은 걸 3번 쌓아 RGB 3채널로 만들어줘야 모델이 받는다. 이 control_image가 곧 '윤곽은 이대로, 내용은 프롬프트대로'의 그 윤곽이야. 원본과 엣지 맵을 나란히 그려서 확인해.",
+  {
+    text: "원본 사진에서 ControlNet이 따라갈 '구조 지도'를 만들어. 512×512로 맞춘 뒤 cv2.Canny로 외곽선만 뽑아(임계값 100/200). 엣지는 흑백 1채널이라, 같은 걸 3번 쌓아 RGB 3채널로 만들어줘야 모델이 받는다. 이 control_image가 곧 '윤곽은 이대로, 내용은 프롬프트대로'의 그 윤곽이야. 원본과 엣지 맵을 나란히 그려서 확인해. (보라색 줄 hover 참고.)",
+    lines: {
+      8: "cv2.Canny로 외곽선만 추출 — 약한 엣지<100 버리고 강한 엣지>200 남기는 이중 임계값.",
+      9: "[:, :, None]로 채널 축 하나 추가: (H,W) → (H,W,1) 흑백 1채널.",
+      10: "같은 엣지를 3번 쌓아 (H,W,3) RGB로 — ControlNet 입력이 3채널이라 형식 맞추기.",
+    },
+  },
   // 2 — 단일 생성
   "이제 실제로 생성시켜. '정글 속 파란 극락조'라고 프롬프트를 주고, 방금 만든 Canny 엣지를 image로 넘겨. ControlNet이 매 디노이징 스텝마다 '이 외곽선을 벗어나지 마'라고 UNet을 잡아주니까, 원본과 똑같은 실루엣인데 완전히 다른 대상이 나와. 시드를 33으로 고정해 재현 가능하게 하고, 원본·엣지·결과 셋을 비교해.",
   // 3 — 여러 프롬프트로 같은 구조 재활용
@@ -142,7 +149,13 @@ const explanations: ExplanationEntry[] = [
   "파이프라인을 안 쓰고 부품을 하나씩 직접 불러. SD1.5에서 vae·unet·tokenizer·text_encoder·scheduler를 subfolder별로 꺼내 각각 device에 올리고, canny ControlNetModel도 따로 로드해. 셀을 실행하면 ControlNet 구조가 통째로 출력되는데 — conv_in, controlnet_cond_embedding(구조 입력 다운샘플러), down_blocks(UNet 인코더 복사본), 그리고 핵심인 controlnet_down_blocks/controlnet_mid_block(전부 1×1 conv = 'zero convolution')이 보여. 이 zero-conv가 학습 초기에 0에서 시작해 본체를 망가뜨리지 않으면서 점점 조건을 주입하는 장치야.",
   // 11 — ControlNet 단일 forward + UNet 잔차 주입
   {
-    text: "ControlNet이 뱉는 게 정확히 뭔지 한 번 호출해봐. 랜덤 잠재(1,4,64,64)와 프롬프트 임베딩, 그리고 구조 조건 이미지를 ControlNet에 넣으면 down_block_res_samples(리스트)와 mid_block_res_sample(하나)이 나와. 이걸 그대로 UNet에 down_block_additional_residuals·mid_block_additional_residual로 꽂아주면, UNet이 노이즈를 예측할 때 각 해상도 층마다 구조 힌트가 더해져. 이게 '얼린 UNet + 외부 잔차 주입'이라는 ControlNet의 작동 원리 그 자체야.",
+    text: "ControlNet이 뱉는 게 정확히 뭔지 한 번 호출해봐. 랜덤 잠재(1,4,64,64)와 프롬프트 임베딩, 그리고 구조 조건 이미지를 ControlNet에 넣으면 down_block_res_samples(리스트)와 mid_block_res_sample(하나)이 나와. 이걸 그대로 UNet에 down_block_additional_residuals·mid_block_additional_residual로 꽂아주면, UNet이 노이즈를 예측할 때 각 해상도 층마다 구조 힌트가 더해져. 이게 '얼린 UNet + 외부 잔차 주입'이라는 ControlNet의 작동 원리 그 자체야. (보라색 줄 hover 참고.)",
+    lines: {
+      13: "ControlNet의 출력은 두 덩어리: down 잔차들(리스트)과 mid 잔차(하나) — 구조 힌트.",
+      16: "controlnet_cond=조건 이미지 — Canny 같은 구조 맵이 들어가는 자리.",
+      25: "★그 down 잔차를 UNet에 additional_residuals로 주입 — 각 다운샘플 층에 구조 보정 더하기.",
+      26: "mid 잔차도 UNet 중간 블록에 주입. 이 두 줄이 'ControlNet→얼린 UNet' 연결 그 자체.",
+    },
     diagram: {
       title: "ControlNet → UNet 잔차 주입",
       kind: "algorithm",
@@ -177,7 +190,13 @@ const explanations: ExplanationEntry[] = [
   "ControlNet에 넣을 구조 이미지도 CFG 배치에 맞춰 준비해. VaeImageProcessor로 Canny 엣지를 정규화 없이(do_normalize=False) 전처리해 텐서로 만들고, CFG의 두 갈래(조건/무조건)에 똑같이 쓰려고 2배로 복제(torch.cat ×2)해. 잠재 배치(2)와 조건 배치(2)가 어긋나지 않게 줄을 맞추는 단계야.",
   // 15 — 수동 디노이징 루프
   {
-    text: "이제 파이프라인 없이 디노이징 루프를 손으로 돌려. 순수 노이즈에서 시작해 20스텝 동안: 잠재를 2배로 복제(CFG) → ControlNet으로 구조 잔차를 뽑고(scale 0.8) → 그걸 UNet에 꽂아 노이즈를 예측 → 조건/무조건 예측을 분리해 guidance_scale 7.5로 증폭 → 스케줄러로 한 스텝 디노이즈. 5스텝마다 VAE로 디코드해 그림을 갱신하면, 노이즈가 점점 '외곽선을 따르는 그림'으로 정돈되는 과정이 눈에 보여. 파이프라인이 내부에서 매 스텝 하던 일을 그대로 펼쳐 쓴 거야.",
+    text: "이제 파이프라인 없이 디노이징 루프를 손으로 돌려. 순수 노이즈에서 시작해 20스텝 동안: 잠재를 2배로 복제(CFG) → ControlNet으로 구조 잔차를 뽑고(scale 0.8) → 그걸 UNet에 꽂아 노이즈를 예측 → 조건/무조건 예측을 분리해 guidance_scale 7.5로 증폭 → 스케줄러로 한 스텝 디노이즈. 5스텝마다 VAE로 디코드해 그림을 갱신하면, 노이즈가 점점 '외곽선을 따르는 그림'으로 정돈되는 과정이 눈에 보여. 파이프라인이 내부에서 매 스텝 하던 일을 그대로 펼쳐 쓴 거야. (보라색 줄 hover 참고.)",
+    lines: {
+      11: "CFG라 잠재를 2배 복제 → 조건/무조건을 한 배치로 동시 처리.",
+      15: "★매 스텝 ControlNet 먼저 호출 — 이번 잠재에 맞는 구조 잔차를 새로 뽑아.",
+      19: "conditioning_scale=0.8 = 구조를 얼마나 세게 따를지. 그 잔차에 곱하는 가중치.",
+      32: "CFG 증폭: uncond + 7.5·(text − uncond). ControlNet 잔차는 이미 UNet 안에서 반영됨.",
+    },
     diagram: {
       title: "수동 ControlNet 디노이징 루프",
       kind: "algorithm",

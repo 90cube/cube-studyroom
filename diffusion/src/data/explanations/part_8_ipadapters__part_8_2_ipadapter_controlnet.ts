@@ -43,6 +43,11 @@ const explanations: ExplanationEntry[] = [
   // 1 — 뎁스 ControlNet + 파이프라인 로드
   {
     text: "구조 손잡이부터 끼워. control_v11f1p_sd15_depth ControlNet을 SD1.5에 붙여 StableDiffusionControlNetPipeline을 만들고 스케줄러를 DDIM으로 갈아. 뎁스 ControlNet은 '카메라로부터의 거리 지도'를 받아 장면의 입체 배치를 고정해줘 — 다음에 IP-Adapter를 추가로 끼우면, 이 뎁스 구조를 유지한 채 참조 이미지의 외형을 입히게 돼.",
+    lines: {
+      3: "뎁스 전용 ControlNet 가중치를 받아. 'depth'=거리 지도로 구조를 잡는 종류. float16으로 맞춰.",
+      7: "controlnet=controlnet — 위에서 만든 ControlNet을 파이프라인에 끼우는 핵심 인자.",
+      10: "스케줄러를 DDIM으로 교체. 결정론적이라 ControlNet+IP 조합 결과가 안정적.",
+    },
     diagram: {
       title: "IP-Adapter + ControlNet 이중 조건",
       kind: "architecture",
@@ -70,12 +75,25 @@ const explanations: ExplanationEntry[] = [
   // 2 — 뎁스 추정기 로드
   "뎁스 맵을 만들 추정기를 준비해. transformers.pipeline('depth-estimation')에 가벼운 'Distill-Any-Depth-Small' 모델을 지정해 — 작고 빠르면서도 거리 추정이 깔끔해. 이게 원본 사진에서 '어디가 가깝고 어디가 먼지'를 뽑아낼 도구야.",
   // 3 — 뎁스 맵 생성 + 시각화
-  "참조 장면(vermeer.jpg)에서 뎁스 맵을 뽑아. 추정기를 돌려 거리 정보를 흑백으로 받고, 1채널을 3번 쌓아 ControlNet이 받는 RGB 3채널로 만든 뒤 PIL 이미지로 되돌려. 그려보면 가까운 인물은 밝게/배경은 어둡게 — 이 입체 배치가 곧 생성 결과의 골격(구도)이 될 거야.",
+  {
+    text: "참조 장면(vermeer.jpg)에서 뎁스 맵을 뽑아. 추정기를 돌려 거리 정보를 흑백으로 받고, 1채널을 3번 쌓아 ControlNet이 받는 RGB 3채널로 만든 뒤 PIL 이미지로 되돌려. 그려보면 가까운 인물은 밝게/배경은 어둡게 — 이 입체 배치가 곧 생성 결과의 골격(구도)이 될 거야.",
+    lines: {
+      2: "추정기를 돌려 결과 딕셔너리에서 'depth' 키만 꺼내. 흑백 거리 맵 한 장.",
+      4: "depth[:, :, None] — (H,W) 2D에 채널 축을 하나 붙여 (H,W,1)로. 다음 줄에서 쌓으려고.",
+      5: "같은 1채널을 3번 옆으로 붙여 (H,W,3) RGB로. ControlNet 입력이 3채널이라 흑백을 회색 RGB로 위장.",
+      6: "넘파이 배열을 다시 PIL 이미지로 되돌려. 파이프라인이 PIL을 받으니까.",
+    },
+  },
   // 4 — IP-Adapter 가중치 로드
   "이제 외형 손잡이를 추가해. 같은 파이프라인에 h94/IP-Adapter의 'ip-adapter_sd15'(기본 변형)를 끼워. 이러면 한 파이프라인이 ControlNet(뎁스 구조)과 IP-Adapter(이미지 외형) 두 조건을 동시에 받게 돼 — 이미 끼운 뎁스 ControlNet은 그대로 두고 이미지 프롬프트 통로만 새로 여는 거야.",
   // 5 — 이중 조건 생성 (뎁스 + 참조 이미지)
   {
     text: "두 조건을 동시에 먹여 생성해. set_ip_adapter_scale(1.0)으로 참조 이미지를 강하게 반영하고, image=뎁스맵(구조)·ip_adapter_image=statue(외형)·prompt=''(텍스트 끔)로 5장을 뽑아. 결과는 '베르메르 그림의 입체 구도'는 그대로인데 '조각상 이미지의 질감·외형'으로 채워진 합성이 나와. 이 조합이 실전에서 강력한 이유 — 제품 사진을 원하는 구도(뎁스)에 고정한 채 레퍼런스 무드로 리라이팅하거나, 캐릭터를 정해진 포즈/배치에 두고 일관된 외형으로 찍어내는 데 쓰여(diffusers 공식 문서도 IP-Adapter의 대표 응용으로 'ControlNet과 결합한 구조 제어'를 든다).",
+    lines: {
+      8: "image=depth — ControlNet 통로. 여기 들어온 뎁스맵이 결과의 '구조/구도'를 잡아.",
+      9: "ip_adapter_image=ip_image — IP-Adapter 통로. 이쪽이 결과의 '외형/질감'을 잡아. 두 인자가 각각 다른 손잡이.",
+      10: "guidance_scale=1 — 텍스트 CFG 끔. prompt가 비었으니 텍스트 안내 불필요.",
+    },
     diagram: {
       title: "이중 조건 생성 루프",
       kind: "algorithm",

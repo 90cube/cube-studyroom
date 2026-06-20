@@ -16,6 +16,12 @@ const explanations: ExplanationEntry[] = [
         use: "from_pretrained로 불러오고 pipe(prompt)로 호출하는 이 파트의 주인공",
       },
     ],
+    lines: {
+      4: "from_pretrained: 허브 repo id를 주면 가중치+설정을 통째로 받아 파이프라인을 조립해.",
+      6: "torch_dtype=float16: 절반 정밀도로 받아 VRAM 절약+속도↑ (그래서 .to('cuda') 전에 지정).",
+      7: ".to('cuda'): 다 조립된 파이프라인을 GPU로 통째로 옮겨 — 이제부터 추론은 GPU에서.",
+      9: "pipe(prompt): __call__ 호출. 이 한 줄 안에 인코딩→denoising 루프→VAE 디코딩이 다 돌아 .images[0]로 나와.",
+    },
   },
   // 1 — options
   "같은 pipe를 더 정교하게 불러. negative_prompt로 빼고 싶은 걸 적고, num_inference_steps로 스텝 수(품질↔속도), guidance_scale로 프롬프트를 얼마나 강하게 따를지(CFG)를 조절해. generator에 시드를 고정하면 같은 결과를 재현할 수 있어.",
@@ -29,6 +35,9 @@ const explanations: ExplanationEntry[] = [
         use: "from_config로 기존 설정을 물려받아 pipe.scheduler에 꽂아",
       },
     ],
+    lines: {
+      3: "from_config(기존 config): 학습된 베타 스케줄 등 설정은 그대로 물려받고 샘플링 방식만 DDIM으로 바꿔 pipe.scheduler에 다시 꽂아.",
+    },
   },
 ];
 

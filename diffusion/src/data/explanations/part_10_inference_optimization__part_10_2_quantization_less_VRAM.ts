@@ -31,13 +31,25 @@ const explanations: ExplanationEntry[] = [
     ],
   },
   // 1 — print_gpu_memory helper
-  "VRAM 사용량을 찍어주는 헬퍼를 정의해. 지금 할당된 메모리·예약된 메모리·최고점(peak) 세 가지를 MB로 보여줘. 양자화의 효과는 결국 '숫자로 줄었나'로 증명해야 하니, 이걸 전후로 호출해 비교할 거야.",
+  {
+    text: "VRAM 사용량을 찍어주는 헬퍼를 정의해. 지금 할당된 메모리·예약된 메모리·최고점(peak) 세 가지를 MB로 보여줘. 양자화의 효과는 결국 '숫자로 줄었나'로 증명해야 하니, 이걸 전후로 호출해 비교할 거야.",
+    lines: {
+      2: "memory_allocated() — 지금 실제 텐서가 쓰는 VRAM(바이트). /1024**2로 MB 변환.",
+      4: "max_memory_allocated() — 시작 이후 찍은 최고점. 생성 중 순간 최대 VRAM을 알려줘 — OOM 판단에 핵심.",
+    },
+  },
   // 2 — load fp16 baseline pipeline
   "기준선으로 보통 SD1.5를 fp16으로 불러와 DDIM 스케줄러를 깔아. fp16(16비트 부동소수)은 이미 fp32 대비 절반으로 줄인 상태지만, 여기서 더 짜낼 수 있는지 보는 게 이번 목표야.",
   // 3 — fp16 UNet footprint
   "U-Net이 차지하는 메모리를 GB 단위로 재봐. U-Net은 SD에서 제일 무거운 부품(노이즈 예측 본체)이라, 양자화로 노릴 1순위 타깃이야. 이 숫자를 적어두고 4비트 버전과 맞대볼 거야.",
   // 4 — fp16 generation + peak memory
-  "fp16 파이프라인으로 'Fantasy dragon'을 35스텝 생성하면서 peak 메모리를 재. 품질 기준선이자 메모리 기준선 — 다음에 4비트로 같은 그림을 뽑아 '메모리는 얼마나 줄고 품질은 얼마나 유지되나'를 판단할 잣대야.",
+  {
+    text: "fp16 파이프라인으로 'Fantasy dragon'을 35스텝 생성하면서 peak 메모리를 재. 품질 기준선이자 메모리 기준선 — 다음에 4비트로 같은 그림을 뽑아 '메모리는 얼마나 줄고 품질은 얼마나 유지되나'를 판단할 잣대야.",
+    lines: {
+      3: "reset_peak_memory_stats() — peak 계측기를 0으로 리셋. 이 생성 동안의 순수 최고 VRAM만 재려고 먼저 초기화.",
+      11: "generator=torch.manual_seed(42) — 시드 고정. 4비트 버전(10번)과 똑같은 그림을 뽑아 품질을 1:1 비교.",
+    },
+  },
   // 5 — free the fp16 pipeline
   "4비트 실험을 깨끗한 상태에서 하려고 fp16 파이프라인을 GPU에서 내리고(.to('cpu')), 캐시를 비우고(empty_cache), 객체를 삭제(del)해 VRAM을 완전히 회수해. 이걸 안 하면 두 모델이 메모리에 겹쳐 올라가 측정이 오염되거든.",
   // 6 — quantization imports
@@ -59,6 +71,14 @@ const explanations: ExplanationEntry[] = [
   // 7 — 4-bit quant config + load UNet into pipeline
   {
     text: "핵심 셀 — U-Net을 4비트로 불러와 파이프라인에 끼워. 설정을 보면: load_in_4bit(4비트로 압축), nf4(정규분포 가중치에 최적화된 4비트 포맷 'Normal Float 4'), double_quant(양자화 상수까지 한 번 더 압축해 추가 절약), compute_dtype=fp16(실제 계산은 fp16으로 풀어서). 이렇게 U-Net만 4비트로 로드해 나머지(VAE·텍스트 인코더)와 합쳐 파이프라인을 조립해 — 텍스트 인코더·VAE는 작고 선형층이 적어 보통 양자화 안 해. 같은 기법으로 12GB 한 장짜리 GPU나 무료 Colab에서도 FLUX 같은 거대 모델을 굴릴 수 있게 되는 게 이 절의 핵심 응용이야.",
+    lines: {
+      1: "load_in_4bit=True — 가중치를 4비트로 압축. 16비트 대비 약 1/4 메모리.",
+      2: "bnb_4bit_compute_dtype=torch.float16 — 저장은 4비트지만 실제 계산은 fp16으로 풀어서. 정확도 유지.",
+      3: "bnb_4bit_use_double_quant=True — 양자화 상수까지 한 번 더 압축. 파라미터당 ~0.4비트 추가 절약.",
+      4: "bnb_4bit_quant_type=\"nf4\" — 'Normal Float 4'. 정규분포를 따르는 가중치에 최적화된 4비트 포맷.",
+      11: "quantization_config=quant_config — 위 설정을 U-Net 로드에 끼움. 이 인자가 4비트 압축을 발동.",
+      14: "unet=unet — 4비트 U-Net을 파이프라인에 주입. VAE·텍스트 인코더는 기본(fp16) 그대로 합쳐.",
+    },
     diagram: {
       title: "4비트 양자화 로드",
       kind: "algorithm",
@@ -79,7 +99,12 @@ const explanations: ExplanationEntry[] = [
   // 8 — 4-bit UNet footprint
   "4비트 U-Net의 메모리를 다시 재서 3번(fp16)과 비교해. 4비트는 16비트의 1/4이니 U-Net 메모리가 대략 4분의 1 가까이로 뚝 떨어진 게 숫자로 보일 거야. '진짜 줄었다'를 눈으로 확인하는 결정적 비교야.",
   // 9 — inspect param dtypes
-  "U-Net 파라미터들의 데이터타입을 훑어 찍어봐. 양자화된 선형층 가중치는 uint8 계열(4비트를 담는 그릇)로, 양자화 안 된 부분은 fp16으로 섞여 보일 거야 — '모든 층이 아니라 무거운 선형층만 골라 압축됐다'는 양자화의 실제 모습을 확인하는 거지.",
+  {
+    text: "U-Net 파라미터들의 데이터타입을 훑어 찍어봐. 양자화된 선형층 가중치는 uint8 계열(4비트를 담는 그릇)로, 양자화 안 된 부분은 fp16으로 섞여 보일 거야 — '모든 층이 아니라 무거운 선형층만 골라 압축됐다'는 양자화의 실제 모습을 확인하는 거지.",
+    lines: {
+      2: "param.dtype를 찍어. uint8=4비트가 담긴 양자화 층, float16=양자화 안 한 층. 섞여 나오는 게 정상.",
+    },
+  },
   // 10 — 4-bit generation + peak memory
   "마지막으로 4비트 파이프라인으로 똑같이 'Fantasy dragon'을 35스텝 생성하고 peak 메모리를 재서 4번(fp16)과 맞대봐. 두 가지를 동시에 판단해: peak VRAM이 확실히 줄었는지, 그리고 4비트로 짓눌렀는데도 그림 품질이 쓸 만하게 유지되는지. 보통 약간의 화질 손해를 내주고 큰 메모리 절약을 얻는 — 저사양 GPU에서 큰 모델을 굴리기 위한 현실적 거래야.",
 ];

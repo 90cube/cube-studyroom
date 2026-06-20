@@ -25,9 +25,22 @@ const explanations: ExplanationEntry[] = [
   Q -->|예| S
   Q -->|아니오| OUT["깨끗한 latent"]`,
     },
+    lines: {
+      3: "CFG면 latent를 [uncond, text] 2배로 복제해 한 번의 U-Net 호출로 두 방향을 동시에 예측.",
+      9: "encoder_hidden_states=prompt_embeds: 텍스트 임베딩을 U-Net의 cross-attention에 꽂아 '뭘 그릴지' 조건화.",
+      16: "guidance: uncond에서 (text−uncond) 방향으로 scale만큼 더 밀어 — 프롬프트 충실도(CFG)의 실체.",
+      19: "scheduler.step: 예측 노이즈로 x_t를 x_(t-1)로 한 칸 디노이즈. 이 줄이 루프의 실제 전진.",
+    },
   },
   // 1 — encode / decode
-  "루프는 'latent 공간'에서 돌아. 그래서 앞뒤로 변환이 필요해: 들어오기 전 encode_prompt가 프롬프트를 CLIP으로 임베딩하고, prepare_latents가 순수 노이즈에서 시작점을 만들어. 루프가 끝나면 vae.decode가 깨끗해진 latent를 실제 이미지 픽셀로 되돌려 — scaling_factor로 나눠주는 건 VAE가 학습된 스케일에 맞추는 거야.",
+  {
+    text: "루프는 'latent 공간'에서 돌아. 그래서 앞뒤로 변환이 필요해: 들어오기 전 encode_prompt가 프롬프트를 CLIP으로 임베딩하고, prepare_latents가 순수 노이즈에서 시작점을 만들어. 루프가 끝나면 vae.decode가 깨끗해진 latent를 실제 이미지 픽셀로 되돌려 — scaling_factor로 나눠주는 건 VAE가 학습된 스케일에 맞추는 거야.",
+    lines: {
+      2: "encode_prompt: 프롬프트를 CLIP 텍스트 인코더로 임베딩 — 위 루프의 encoder_hidden_states가 바로 이거.",
+      5: "prepare_latents: 순수 가우시안 노이즈로 루프의 출발점 x_T를 만들어.",
+      10: "vae.decode: 깨끗해진 latent를 픽셀 이미지로 복원. scaling_factor로 나누는 건 VAE 학습 스케일에 맞추는 보정.",
+    },
+  },
 ];
 
 export default explanations;

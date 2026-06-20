@@ -21,6 +21,12 @@ const explanations: ExplanationEntry[] = [
         use: "float16·cuda 배치",
       },
     ],
+    lines: {
+      10: "load_lora_weights(lcm-lora-sdxl): LCM 증류 가중치를 끼워 — 이게 4스텝을 가능하게 하는 핵심 어댑터.",
+      11: "LCMScheduler로 교체: 큰 점프가 되는 step 공식으로 바꿔야 4스텝이 실제로 동작.",
+      15: "num_inference_steps=4: 25~50에서 4로. LCM이라 이게 가능.",
+      16: "guidance_scale=0.0: LCM은 CFG가 증류에 녹아 있어 — 평소처럼 7.5 주면 이중으로 밀려 타버림. 0~2로 낮게.",
+    },
   },
   // 1 — LCM step internals (algorithm)
   {
@@ -49,6 +55,11 @@ const explanations: ExplanationEntry[] = [
   N --> R["LCMSchedulerOutput(prev_sample, denoised)"]
   F --> R`,
     },
+    lines: {
+      6: "predicted_original_sample: 매 스텝 노이즈를 조금 빼는 대신 x_0(완성본)를 한 방에 추정 — 큰 점프의 출발.",
+      9: "denoised = c_out·x_0 + c_skip·sample: 경계조건으로 '완성본 추정'과 '현재값'을 섞어.",
+      14: "마지막이 아니면 다음 시점만큼 노이즈를 다시 주입 → 멀티스텝. 완성본 겨냥했다 살짝 뒤로 물러서는 식.",
+    },
   },
   // 2 — c_skip / c_out boundary conditions
   "c_skip과 c_out이 LCM의 '경계조건'이야 — consistency model이 t=0에서 항등함수(아무것도 안 바꿈)에 수렴하도록 강제하는 장치지. 정의를 보면 timestep을 timestep_scaling(기본 10.0)으로 키운 뒤, 노이즈가 많은 큰 t에서는 c_out이 커져서 x_0 추정값을 많이 반영하고, t가 0에 가까워지면 c_skip이 1로 가서 현재 sample을 거의 그대로 유지해. 즉 '많이 망가졌을 땐 과감히 완성본을 겨냥하고, 거의 다 됐을 땐 손대지 마라'를 수식으로 박아둔 거야. 이 부드러운 전환 덕에 소수 스텝에서도 안정적이야.",
@@ -76,6 +87,11 @@ const explanations: ExplanationEntry[] = [
         use: "bnb_4bit_compute_dtype=bfloat16 지정",
       },
     ],
+    lines: {
+      7: "quant_backend='bitsandbytes_4bit': 가중치를 4비트로 압축하는 백엔드 — 12B 모델을 소비자 GPU에 욱여넣는 핵심.",
+      14: "quantization_config=quant: from_pretrained에 넘기면 로드하면서 자동으로 양자화돼.",
+      17: "enable_model_cpu_offload(): 양자화+오프로드 조합 — 여기에 LCM 4스텝까지 더하면 실서비스 구성 완성.",
+    },
   },
 ];
 

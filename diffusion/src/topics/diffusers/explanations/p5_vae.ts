@@ -26,9 +26,22 @@ const explanations: ExplanationEntry[] = [
         use: "float16·cuda 배치, no_grad 컨텍스트",
       },
     ],
+    lines: {
+      12: "*2−1: 0~1 텐서를 [-1,1]로 옮겨. VAE가 그 범위로 학습돼서 안 맞추면 색이 떠.",
+      16: ".latent_dist: vae.encode는 텐서가 아니라 가우시안 '분포'를 돌려줘 — VAE라서 평균·분산을 내놓음.",
+      17: ".sample(): 그 분포에서 한 점을 뽑아 z (1,4,64,64). 결정적으로 쓰려면 .mode()를 쓰기도 해.",
+      18: "*scaling_factor(0.18215): raw latent를 단위분산 근처로 맞춰 — U-Net이 학습된 스케일에 들어가게.",
+    },
   },
   // 1 — decode usage
-  "이번엔 거꾸로. scaling_factor로 곱했던 걸 다시 나눠서 VAE가 학습된 스케일로 되돌린 뒤 vae.decode에 넣어 — 64×64 latent가 512×512 픽셀로 펼쳐져. 나온 값은 [-1,1]이니까 /2+0.5로 [0,1]로 옮기고 clamp해. 그러면 원본과 거의 똑같은 고양이가 복원돼. 인코딩→디코딩을 왕복해도 거의 안 깨진다는 게 VAE가 좋은 압축기라는 증거야.",
+  {
+    text: "이번엔 거꾸로. scaling_factor로 곱했던 걸 다시 나눠서 VAE가 학습된 스케일로 되돌린 뒤 vae.decode에 넣어 — 64×64 latent가 512×512 픽셀로 펼쳐져. 나온 값은 [-1,1]이니까 /2+0.5로 [0,1]로 옮기고 clamp해. 그러면 원본과 거의 똑같은 고양이가 복원돼. 인코딩→디코딩을 왕복해도 거의 안 깨진다는 게 VAE가 좋은 압축기라는 증거야.",
+    lines: {
+      3: "/scaling_factor: 인코딩 때 곱한 걸 도로 나눠 VAE 원래 스케일로 복귀 — decode 직전 필수 보정.",
+      4: "vae.decode(z).sample: 64×64 latent를 512×512 픽셀로 펼쳐. .sample로 텐서를 꺼냄.",
+      6: "/2+0.5 후 clamp: 디코더 출력 [-1,1]을 화면용 [0,1]로 옮기고 범위 밖 값을 잘라.",
+    },
+  },
   // 2 — encode internals
   {
     text: "실제 소스의 encode. 핵심은 두 가지야. 첫째, use_slicing이 켜져 있고 배치가 2장 이상이면 한 장씩 쪼개서 인코딩해 — 메모리를 아끼려고. 둘째, _encode가 돌려준 텐서(평균+로그분산이 채널로 붙어 있어)를 DiagonalGaussianDistribution으로 감싸서 '분포'로 내보내. _encode 안에서는 큰 이미지면 타일로 쪼개고, 아니면 encoder(Conv 다운샘플 스택)로 512를 64까지 줄인 다음 quant_conv(1×1 conv)로 분포 파라미터를 정리해.",
@@ -98,6 +111,10 @@ const explanations: ExplanationEntry[] = [
         use: "madebyollin/sdxl-vae-fp16-fix 를 불러와 파이프라인에 주입",
       },
     ],
+    lines: {
+      6: "madebyollin/sdxl-vae-fp16-fix: fp16에서 안 터지게 재학습된 커뮤니티 VAE 가중치를 받아.",
+      10: "vae=vae: 파이프라인 조립 때 기본 VAE 대신 이걸 주입 — force_upcast 없이 전 구간 fp16 유지.",
+    },
   },
   // 6 — vae slicing / tiling
   "디코딩은 latent를 픽셀로 펼치는 순간 활성값이 확 늘어서 OOM이 잘 나는 구간이야. 두 스위치로 눌러. enable_vae_slicing()은 4장을 한꺼번에 디코딩하지 말고 1장씩 돌려 — 다중 이미지 생성 시 피크 메모리를 1/N로. enable_vae_tiling()은 큰 해상도를 겹치는 타일로 쪼개 디코딩하고 이음새를 blend로 메워 — 1024px 이상 업스케일에서 유용해. 위 소스의 use_slicing/use_tiling 분기가 바로 이 메서드들이 켜는 플래그야. 둘 다 메모리를 약간의 속도와 맞바꾸는 거라 VRAM이 빠듯할 때만 켜면 돼.",
