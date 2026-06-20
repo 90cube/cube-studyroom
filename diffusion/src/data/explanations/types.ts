@@ -19,6 +19,7 @@ export interface CodeExplanation {
   text: string; // 구어체 해석 (항상)
   imports?: ImportNote[]; // import 셀일 때 라이브러리별 미리보기
   diagram?: DiagramSpec; // 알고리즘/아키텍처 시각화
+  lines?: Record<number, string>; // 핵심 줄 hover 풀이 (1-based 줄번호 → 짧은 설명)
 }
 
 /** A registry entry is either a plain verbal string, or a richer object. */

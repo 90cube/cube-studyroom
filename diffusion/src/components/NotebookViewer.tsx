@@ -74,7 +74,7 @@ export function NotebookViewer({ id }: { id: string }) {
         const explanation = topic.getExplanation(id, codeIndex);
         return (
           <div key={i} className="space-y-2">
-            <CodeCell source={cell.source} />
+            <CodeCell source={cell.source} lines={explanation?.lines} />
             {explanation && <ExplanationBlock explanation={explanation} />}
             {explanation?.diagram && <DiagramBlock diagram={explanation.diagram} />}
             {cell.outputs.length > 0 && (

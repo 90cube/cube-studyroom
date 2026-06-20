@@ -82,6 +82,13 @@ const diffusers: Topic = {
   titleEn: "Hugging Face diffusers",
   blurb: "실전 라이브러리는 어떻게 돌아가나 — 핵심 소스를 읽고 응용까지 8파트.",
   icon: Boxes,
+  overview: {
+    narrative:
+      "이 라이브러리는 위에서 아래로 읽는다 — 순서가 곧 의존성이다. 먼저 `pipe()`가 도는 **전체 그림**을 한 바퀴 잡고(1), 그 안에 끼는 **핵심 부품**을 하나씩 줌인한다: 노이즈를 빼는 스케줄러, 예측하는 U-Net, 조종하는 어텐션, 압축하는 VAE(2~5). 부품을 알면 그 위에 **확장·응용**을 얹는다 — 구조를 강제하는 ControlNet, 어댑터를 끼우는 로더, 빠르고 가볍게 만드는 최적화(6~8). 뒤 파트는 앞 파트가 그린 지도 위에 선다.",
+    map: `flowchart TD
+  A["① 전체 그림<br/>파이프라인 한 바퀴 (1)"] --> B["② 핵심 부품<br/>스케줄러·U-Net·어텐션·VAE (2~5)"]
+  B --> C["③ 확장·응용<br/>ControlNet·어댑터·최적화 (6~8)"]`,
+  },
   curriculum: diffusersCurriculum,
   partBySlug: diffusersBySlug,
   repoUrl: DIFFUSERS_REPO_URL,

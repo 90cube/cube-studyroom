@@ -1,7 +1,10 @@
 // Notebook code cell. Render-only. Python syntax highlight + copy button.
+// Optional per-line notes: marked lines get a tint + a hover tooltip (the note).
+// Uses a custom renderer so we control line numbering + attach the note ourselves.
 
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import createElement from "react-syntax-highlighter/dist/esm/create-element";
 import {
   oneDark,
   oneLight,
@@ -9,9 +12,16 @@ import {
 import { Check, Copy } from "lucide-react";
 import { useTheme } from "@/store/useTheme";
 
-export function CodeCell({ source }: { source: string }) {
+export function CodeCell({
+  source,
+  lines,
+}: {
+  source: string;
+  lines?: Record<number, string>;
+}) {
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
+  const hasNotes = !!lines && Object.keys(lines).length > 0;
 
   const copy = async () => {
     try {
@@ -51,6 +61,37 @@ export function CodeCell({ source }: { source: string }) {
           background: "transparent",
         }}
         codeTagProps={{ style: { fontFamily: "ui-monospace, monospace" } }}
+        renderer={
+          hasNotes
+            ? ({ rows, stylesheet, useInlineStyles }) =>
+                rows.map((node, i) => {
+                  const note = lines?.[i + 1];
+                  return (
+                    <span
+                      key={i}
+                      title={note}
+                      style={{
+                        display: "block",
+                        ...(note
+                          ? {
+                              backgroundColor: "rgba(139, 92, 246, 0.16)",
+                              boxShadow: "inset 2px 0 0 0 rgba(139, 92, 246, 0.9)",
+                              cursor: "help",
+                            }
+                          : {}),
+                      }}
+                    >
+                      {createElement({
+                        node,
+                        stylesheet,
+                        useInlineStyles,
+                        key: `line-${i}`,
+                      })}
+                    </span>
+                  );
+                })
+            : undefined
+        }
       >
         {source.replace(/\n$/, "")}
       </SyntaxHighlighter>

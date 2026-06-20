@@ -19,6 +19,7 @@ export interface CodeExplanation {
   text: string;
   imports?: ImportNote[];
   diagram?: DiagramSpec;
+  lines?: Record<number, string>; // 핵심 줄 hover 풀이 (1-based 줄번호 → 짧은 설명)
 }
 
 export type ExplanationEntry = string | CodeExplanation;
