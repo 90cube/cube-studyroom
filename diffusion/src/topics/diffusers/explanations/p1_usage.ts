@@ -17,6 +17,7 @@ const explanations: ExplanationEntry[] = [
       },
     ],
     lines: {
+      2: "StableDiffusionPipeline은 모듈이 아니라 '클래스'(코드 덩어리) — diffusers 패키지 안 pipeline_stable_diffusion.py에 class로 정의돼 있어. diffusers가 __init__.py에서 최상위로 re-export해줘서 긴 경로 없이 바로 import되는 거야.",
       4: "from_pretrained: 허브 repo id를 주면 가중치+설정을 통째로 받아 파이프라인을 조립해.",
       6: "torch_dtype=float16: 절반 정밀도로 받아 VRAM 절약+속도↑ (그래서 .to('cuda') 전에 지정).",
       7: ".to('cuda'): 다 조립된 파이프라인을 GPU로 통째로 옮겨 — 이제부터 추론은 GPU에서.",
