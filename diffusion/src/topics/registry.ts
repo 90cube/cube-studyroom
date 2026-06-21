@@ -1,7 +1,7 @@
 // Topic abstraction — the studyroom hosts multiple topics, each providing its
 // own curriculum, content resolver, explanations, labels and storage namespace.
 
-import { Workflow, Boxes, type LucideIcon } from "lucide-react";
+import { Workflow, Boxes, Rocket, type LucideIcon } from "lucide-react";
 import type { Part } from "@/models/curriculum";
 import type { NotebookCell } from "@/models/notebook";
 import type { StudyCell } from "@/models/study";
@@ -15,6 +15,10 @@ import { loadNotebook } from "@/system/notebookLoader";
 import { CURRICULUM as diffusersCurriculum, PART_BY_SLUG as diffusersBySlug } from "@/topics/diffusers/curriculum";
 import { getExplanation as diffusersGetExpl } from "@/topics/diffusers/explanations";
 import { getDoc } from "@/topics/diffusers/docLoader";
+
+import { CURRICULUM as appliedCurriculum, PART_BY_SLUG as appliedBySlug } from "@/topics/applied/curriculum";
+import { getExplanation as appliedGetExpl } from "@/topics/applied/explanations";
+import { getDoc as getAppliedDoc } from "@/topics/applied/docLoader";
 
 /** The whole-topic map shown on the dashboard — top-down before the part list. */
 export interface TopicOverview {
@@ -101,7 +105,34 @@ const diffusers: Topic = {
   getExplanation: diffusersGetExpl,
 };
 
-export const TOPICS: Topic[] = [diffusion, diffusers];
+const applied: Topic = {
+  slug: "applied",
+  title: "응용 — 조립 & 가속",
+  titleEn: "Applied: Swap & Accelerate",
+  blurb: "파이프라인을 부품으로 분해·교체하고, LCM·Lightning·Turbo로 빠르게 — diffusers 다음의 실전 응용.",
+  icon: Rocket,
+  overview: {
+    narrative:
+      "diffusers에서 부품을 따로따로 봤지? 이 토픽은 그 부품을 **분해·교체·가속·조합**하는 실전이다. 파이프라인을 부품으로 쪼개 보고(1), 샘플러를 갈아끼우고(2), 느린 모델을 빠르게 바꾸는 '증류'를 LCM으로 익힌 뒤(3) Lightning·Turbo와 비교하고(4), 마지막에 부품들을 실전 레시피로 조합한다(5). 앞 토픽(diffusers)이 '부품이 뭔지'였다면, 여긴 '부품으로 뭘 하는지'다.",
+    map: `flowchart TD
+  A["① 분해<br/>파이프라인 = 부품 (1)"] --> B["② 교체<br/>샘플러 갈아끼우기 (2)"]
+  B --> C["③ 가속<br/>증류 & LCM·Lightning·Turbo (3·4)"]
+  C --> D["④ 조합<br/>실전 레시피 (5)"]`,
+  },
+  curriculum: appliedCurriculum,
+  partBySlug: appliedBySlug,
+  repoUrl: DIFFUSERS_REPO_URL,
+  repoLabel: "diffusers GitHub 열기",
+  refLabel: "참고 소스 · 문서",
+  itemLabel: "문서",
+  sectionLabel: "코드 읽기 & 사용법",
+  storageNs: "applied",
+  resolveCells: (id) =>
+    Promise.resolve(studyToNotebookCells(getAppliedDoc(id)?.cells ?? [])),
+  getExplanation: appliedGetExpl,
+};
+
+export const TOPICS: Topic[] = [diffusion, diffusers, applied];
 
 export const TOPIC_BY_SLUG: Record<string, Topic> = Object.fromEntries(
   TOPICS.map((t) => [t.slug, t]),
