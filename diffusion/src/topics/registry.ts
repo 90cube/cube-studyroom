@@ -1,7 +1,7 @@
 // Topic abstraction — the studyroom hosts multiple topics, each providing its
 // own curriculum, content resolver, explanations, labels and storage namespace.
 
-import { Workflow, Boxes, Rocket, type LucideIcon } from "lucide-react";
+import { Workflow, Boxes, Rocket, Network, type LucideIcon } from "lucide-react";
 import type { Part } from "@/models/curriculum";
 import type { NotebookCell } from "@/models/notebook";
 import type { StudyCell } from "@/models/study";
@@ -19,6 +19,10 @@ import { getDoc } from "@/topics/diffusers/docLoader";
 import { CURRICULUM as appliedCurriculum, PART_BY_SLUG as appliedBySlug } from "@/topics/applied/curriculum";
 import { getExplanation as appliedGetExpl } from "@/topics/applied/explanations";
 import { getDoc as getAppliedDoc } from "@/topics/applied/docLoader";
+
+import { CURRICULUM as comfyuiCurriculum, PART_BY_SLUG as comfyuiBySlug } from "@/topics/comfyui/curriculum";
+import { getExplanation as comfyuiGetExpl } from "@/topics/comfyui/explanations";
+import { getDoc as getComfyuiDoc } from "@/topics/comfyui/docLoader";
 
 /** The whole-topic map shown on the dashboard — top-down before the part list. */
 export interface TopicOverview {
@@ -132,7 +136,35 @@ const applied: Topic = {
   getExplanation: appliedGetExpl,
 };
 
-export const TOPICS: Topic[] = [diffusion, diffusers, applied];
+const comfyui: Topic = {
+  slug: "comfyui",
+  title: "ComfyUI 커스텀 노드",
+  titleEn: "ComfyUI Custom Nodes",
+  blurb: "노드 만드는 법(규칙·UI·실행·자원)부터 스프라이트 워크플로 응용까지 — 뭐든 만든다.",
+  icon: Network,
+  overview: {
+    narrative:
+      "ComfyUI 노드는 두 겹이다 — 계산하는 **파이썬**(백엔드)과, 화면 위젯을 그리는 **JS**(프론트). 먼저 파이썬만으로 노드의 규칙을 잡고(1), 버튼·캔버스 같은 커스텀 UI를 얹은 뒤(2), 큐·증감·조건부 같은 실행 흐름을 제어하고(3), GPU·외부 LLM 자원을 다룬 다음(4), 마지막에 이 모두를 스프라이트 워크플로로 조립한다(5). 앞 단계가 다음 단계의 부품이 된다.",
+    map: `flowchart TD
+  A["① 규칙<br/>파이썬 노드 = 4가지 (1)"] --> B["② UI<br/>버튼·슬라이더·캔버스 (2)"]
+  B --> C["③ 흐름<br/>리스트·증감·조건부 (3)"]
+  C --> D["④ 자원<br/>GPU 정리·외부 LLM (4)"]
+  D --> E["⑤ 조립<br/>스프라이트 레시피 (5)"]`,
+  },
+  curriculum: comfyuiCurriculum,
+  partBySlug: comfyuiBySlug,
+  repoUrl: "https://github.com/comfyanonymous/ComfyUI",
+  repoLabel: "ComfyUI GitHub 열기",
+  refLabel: "참고 소스 · 문서",
+  itemLabel: "문서",
+  sectionLabel: "코드 읽기 & 사용법",
+  storageNs: "comfyui",
+  resolveCells: (id) =>
+    Promise.resolve(studyToNotebookCells(getComfyuiDoc(id)?.cells ?? [])),
+  getExplanation: comfyuiGetExpl,
+};
+
+export const TOPICS: Topic[] = [diffusion, diffusers, applied, comfyui];
 
 export const TOPIC_BY_SLUG: Record<string, Topic> = Object.fromEntries(
   TOPICS.map((t) => [t.slug, t]),
