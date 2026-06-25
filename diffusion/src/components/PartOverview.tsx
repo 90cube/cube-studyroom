@@ -2,7 +2,7 @@
 // + knowledge chain (선수 지식 → 다음으로). Shown before any detail. Render-only.
 
 import { Link } from "react-router-dom";
-import { Eye } from "lucide-react";
+import { Eye, BookOpen } from "lucide-react";
 import type { Part } from "@/models/curriculum";
 import { useTopic } from "@/topics/TopicContext";
 import { MermaidDiagram } from "@/components/cells/MermaidDiagram";
@@ -53,6 +53,21 @@ export function PartOverview({ part }: { part: Part }) {
           <p className="text-sm leading-relaxed text-foreground">{ov.unlocks}</p>
         </div>
       </div>
+
+      {part.primarySource && (
+        <a
+          href={part.primarySource.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-3 transition-colors hover:border-primary/40"
+        >
+          <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" />
+          <span className="text-sm">
+            <span className="font-medium text-foreground">꼭 볼 것 — {part.primarySource.title}</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">{part.primarySource.why}</span>
+          </span>
+        </a>
+      )}
     </Card>
   );
 }

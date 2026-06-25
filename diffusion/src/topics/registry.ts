@@ -8,9 +8,19 @@ import type { StudyCell } from "@/models/study";
 import type { CodeExplanation } from "@/data/explanations/types";
 import { DIFFUSION_REPO_URL, DIFFUSERS_REPO_URL } from "@/data/constants";
 
-import { CURRICULUM as diffusionCurriculum, PART_BY_SLUG as diffusionBySlug } from "@/data/curriculum";
+import { CURRICULUM as diffusionCurriculum } from "@/data/curriculum";
 import { getExplanation as diffusionGetExpl } from "@/data/explanations";
 import { loadNotebook } from "@/system/notebookLoader";
+import { DIFFUSION_MISSION, DIFFUSION_TEACH } from "@/data/diffusionTeach";
+
+// Merge teach data (1차 출처 + 회상 카드) into the diffusion parts.
+const diffusionParts: Part[] = diffusionCurriculum.map((p) => {
+  const t = DIFFUSION_TEACH[p.id];
+  return t ? { ...p, primarySource: t.primarySource, recall: t.recall } : p;
+});
+const diffusionPartsBySlug: Record<string, Part> = Object.fromEntries(
+  diffusionParts.map((p) => [p.slug, p]),
+);
 
 import { CURRICULUM as diffusersCurriculum, PART_BY_SLUG as diffusersBySlug } from "@/topics/diffusers/curriculum";
 import { getExplanation as diffusersGetExpl } from "@/topics/diffusers/explanations";
@@ -28,6 +38,7 @@ import { getDoc as getComfyuiDoc } from "@/topics/comfyui/docLoader";
 export interface TopicOverview {
   narrative: string; // 이 주제는 이렇게 흐른다 (markdown)
   map: string; // Mermaid — 전체 파트 흐름/스테이지
+  mission?: string; // teach: 왜 배우나 — 실제 목표와 연결 (markdown)
 }
 
 export interface Topic {
@@ -71,9 +82,10 @@ const diffusion: Topic = {
   B --> C["③ 다루기<br/>편집·LDM·텍스트 (4·5·6)"]
   C --> D["④ 제어<br/>ControlNet·IP-Adapter (7·8)"]
   D --> E["⑤ 커스텀·효율<br/>LoRA·최적화 (9·10)"]`,
+    mission: DIFFUSION_MISSION,
   },
-  curriculum: diffusionCurriculum,
-  partBySlug: diffusionBySlug,
+  curriculum: diffusionParts,
+  partBySlug: diffusionPartsBySlug,
   repoUrl: DIFFUSION_REPO_URL,
   repoLabel: "강의 저장소 열기",
   refLabel: "강의 영상",

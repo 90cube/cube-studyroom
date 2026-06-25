@@ -1,5 +1,7 @@
 // Curriculum structure — type definitions only.
 
+import type { PrimarySource, RecallItem } from "@/models/teach";
+
 export interface YouTubeRef {
   title: string;
   url: string;
@@ -31,4 +33,8 @@ export interface Part {
   notebooks: PartNotebookRef[];
   videos: YouTubeRef[];
   overview?: PartOverview;
+  /** teach: 이 파트에서 꼭 볼 단 하나의 1차 자료. */
+  primarySource?: PrimarySource;
+  /** teach: 복습 모드가 섞어 출제하는 회상 카드. */
+  recall?: RecallItem[];
 }

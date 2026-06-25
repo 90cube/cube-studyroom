@@ -11,6 +11,7 @@ export function topicStorageKeys(ns: string) {
   return {
     progress: `studyroom:${ns}:progress:v1`,
     timeline: `studyroom:${ns}:timeline:v1`,
+    review: `studyroom:${ns}:review:v1`,
   } as const;
 }
 

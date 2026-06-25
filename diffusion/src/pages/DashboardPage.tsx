@@ -3,7 +3,7 @@
 
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { CalendarDays, ChartColumn, CircleCheck, Flame } from "lucide-react";
+import { CalendarDays, ChartColumn, CircleCheck, Flame, Brain, ChevronRight } from "lucide-react";
 import { distinctStudyDays, currentStreak, sortEventsDesc } from "@/domain/timelineLogic";
 import { useStudy } from "@/store/StudyStoreProvider";
 import { useTopic } from "@/topics/TopicContext";
@@ -16,6 +16,7 @@ export function DashboardPage() {
   const { overall, timeline } = useStudy();
   const topic = useTopic();
   const recent = sortEventsDesc(timeline).slice(0, 6);
+  const recallCount = topic.curriculum.reduce((n, p) => n + (p.recall?.length ?? 0), 0);
 
   const stats = [
     { label: "전체 진도", value: `${overall.percent}%`, icon: ChartColumn, sub: `${topic.itemLabel} ${overall.completedNotebooks}/${overall.totalNotebooks}` },
@@ -47,6 +48,22 @@ export function DashboardPage() {
       </section>
 
       <TopicOverview />
+
+      {recallCount > 0 && (
+        <Link
+          to={`/${topic.slug}/review`}
+          className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4 transition-colors hover:border-primary/50"
+        >
+          <Brain className="size-5 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-foreground">복습하기</p>
+            <p className="text-xs text-muted-foreground">
+              파트를 넘나들며 핵심 {recallCount}개를 섞어 인출 연습 · 간격 반복
+            </p>
+          </div>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
 
       <section>
         <h2 className="mb-4 text-lg font-medium text-foreground">학습 로드맵</h2>

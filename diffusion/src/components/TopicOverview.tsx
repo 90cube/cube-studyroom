@@ -1,7 +1,7 @@
 // Top-down "큰 그림" for a topic: the whole arc as one diagram + a short
 // narrative, shown above the part roadmap. Render-only; reads from useTopic().
 
-import { Map } from "lucide-react";
+import { Map, Target } from "lucide-react";
 import { useTopic } from "@/topics/TopicContext";
 import { MermaidDiagram } from "@/components/cells/MermaidDiagram";
 import { MarkdownCell } from "@/components/cells/MarkdownCell";
@@ -13,6 +13,17 @@ export function TopicOverview() {
 
   return (
     <Card className="p-5 sm:p-6">
+      {overview.mission && (
+        <div className="mb-5 rounded-lg border border-primary/25 bg-primary/5 p-4">
+          <div className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-primary">
+            <Target className="size-4" />
+            미션 — 왜 배우나
+          </div>
+          <div className="text-sm leading-relaxed text-foreground [&_strong]:font-medium [&_strong]:text-foreground">
+            <MarkdownCell source={overview.mission} />
+          </div>
+        </div>
+      )}
       <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-primary">
         <Map className="size-4" />
         큰 그림 — 이렇게 흐른다

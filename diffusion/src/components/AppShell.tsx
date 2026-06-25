@@ -2,7 +2,7 @@
 // mini progress) + routed <Outlet/>. Reads progress from useStudy(), labels from useTopic().
 
 import { Link, Outlet } from "react-router-dom";
-import { Library, Moon, Sun } from "lucide-react";
+import { Library, Moon, Sun, Brain } from "lucide-react";
 import { useTheme } from "@/store/useTheme";
 import { useStudy } from "@/store/StudyStoreProvider";
 import { useTopic } from "@/topics/TopicContext";
@@ -14,6 +14,7 @@ export function AppShell() {
   const { theme, toggle } = useTheme();
   const { overall } = useStudy();
   const topic = useTopic();
+  const hasReview = topic.curriculum.some((p) => (p.recall?.length ?? 0) > 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,6 +40,17 @@ export function AppShell() {
                 {overall.percent}%
               </span>
             </div>
+
+            {hasReview && (
+              <Link
+                to={`/${topic.slug}/review`}
+                aria-label="복습"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1.5")}
+              >
+                <Brain className="size-4" />
+                <span className="hidden sm:inline">복습</span>
+              </Link>
+            )}
 
             <a
               href={topic.repoUrl}
