@@ -69,6 +69,11 @@ app.registerExtension({
     {
       type: "markdown",
       source:
+        "## 코드 — HTML+CSS로 버튼·패널 만들기 (그럼 Node.js는?)\n`addDOMWidget`이 받는 건 **진짜 DOM 요소**야. 그래서 `document.createElement('button')`로 버튼을 만들고 **CSS로 자유롭게 꾸며**(색·둥근 모서리·hover) 노드에 박으면 돼 — 통짜 HTML 패널·폼·컬러피커도 똑같이. 캔버스에 그려지는 기본 `addWidget('button')`과 달리 **HTML 버튼은 CSS가 완전 자유**야. 스타일은 요소에 직접 `el.style`로 주거나, 확장에서 `<style>`을 주입해 전역으로 먹여.\n```js\nconst btn = document.createElement('button');\nbtn.textContent = '🎨 팔레트 추출';\nObject.assign(btn.style, { padding: '6px 12px', borderRadius: '8px', background: '#8b5cf6', color: '#fff', border: 'none', cursor: 'pointer' });\nbtn.onmouseenter = () => (btn.style.background = '#7c3aed');\nbtn.onclick = () => this.extractPalette();\nthis.addDOMWidget('extract', 'btn', btn);   // 노드에 진짜 HTML 버튼이 박힌다\n```\n**그럼 Node.js는?** 프론트는 **브라우저**에서 도니까 Node.js 런타임(`fs`·`require`·`child_process`)은 **없어** — 파일을 직접 읽거나 OS에 접근하진 못해. 대신 ① 브라우저 호환 **npm 패키지는 번들링(Vite 등)**해서 가져다 쓰고, ② 진짜 파일·무거운 연산·모델은 **파이썬 백엔드** 몫이야(정 Node가 필요하면 파이썬에서 `subprocess`로 Node 스크립트를 띄워). 즉 **브라우저(HTML·CSS·JS/TS/React/Vue) ↔ 파이썬 서버**, 그 사이에 Node 런타임은 끼지 않아.",
+    },
+    {
+      type: "markdown",
+      source:
         "## 코드 — OUTPUT_NODE 이미지 미리보기 (백엔드)\n결과 이미지를 **노드 안에서 바로 보여주려면** 백엔드 쪽 일이야. 클래스에 `OUTPUT_NODE = True`를 달면 그래프 **끝단**(저장·미리보기 같은 사이드이펙트) 노드가 돼. 그리고 실행 메서드가 `return {\"ui\": {\"images\": [...]}}` 형태로 돌려주면 ComfyUI 프론트가 그 이미지를 노드 밑에 그려(코어 PreviewImage가 쓰는 바로 그 방식). 파일은 보통 임시폴더에 저장하고 `filename·subfolder·type`만 넘겨.",
     },
     {
