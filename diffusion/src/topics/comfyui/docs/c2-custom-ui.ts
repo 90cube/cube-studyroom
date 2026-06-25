@@ -10,7 +10,7 @@ const doc: StudyDoc = {
     {
       type: "markdown",
       source:
-        "## 개념 — JS 확장을 어디에 끼우나\n기본 위젯(숫자·콤보·슬라이더)으로 부족하면 **JS 확장**으로 버튼·캔버스·미리보기를 노드에 박아. 진입점은 `app.registerExtension` 하나야. 그 안의 **`beforeRegisterNodeDef` 훅**이 노드 정의가 등록되기 직전에 불려서, 거기서 노드 클래스의 메서드를 가로채(hijack) 내 코드를 끼워넣어.\n패턴은 항상 같아: 원래 `onNodeCreated`를 보관 → 내 함수로 교체 → 안에서 원본을 먼저 부르고(`orig?.apply`) → 그다음 위젯을 추가. 원본을 안 부르면 ComfyUI 기본 동작이 깨지니까 **꼭 먼저 호출**해.",
+        "## 개념 — JS 확장을 어디에 끼우나\n기본 위젯(숫자·콤보·슬라이더)으로 부족하면 **JS 확장**으로 버튼·캔버스·미리보기를 노드에 박아. 진입점은 `app.registerExtension` 하나야. 그 안의 **`beforeRegisterNodeDef` 훅**이 노드 정의가 등록되기 직전에 불려서, 거기서 노드 클래스의 메서드를 가로채(hijack) 내 코드를 끼워넣어.\n패턴은 항상 같아: 원래 `onNodeCreated`를 보관 → 내 함수로 교체 → 안에서 원본을 먼저 부르고(`orig?.apply`) → 그다음 위젯을 추가. 원본을 안 부르면 ComfyUI 기본 동작이 깨지니까 **꼭 먼저 호출**해.\n\n> 참고: 아래 예시는 **바닐라 JS**로 보여주지만 작성 언어를 강제하는 건 아니야 — **TypeScript·React·Vue·Svelte**로 짜서 빌드(dist→JS)해도 똑같이 `WEB_DIRECTORY`로 로드돼(framework-agnostic). 바닐라 JS는 빌드 단계가 없어서 **배우기 가장 쉬워** 쓰는 거고, 복잡한 패널·캔버스는 React/Vue가 편해.",
     },
     {
       type: "markdown",
